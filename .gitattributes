@@ -1,0 +1,4 @@
+# The release workflow builds its .zip from `git archive HEAD`, so anything
+# marked export-ignore here stays out of what players install.
+docs/ export-ignore
+.gen1wild/ export-ignore

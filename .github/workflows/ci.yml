@@ -1,0 +1,98 @@
+name: CI
+
+# Everything that has to be true before this mod is worth releasing:
+# the manifest and merge validate against a real engine checkout, the
+# no-ROM-content lint passes, the Gold adapter check passes, and the mod's
+# own headless suite is green.  No ROM is needed anywhere here -- the mod
+# test harness merges into the engine's fixture dataset.
+#
+# release.yml calls this workflow first, so a red CI blocks the release.
+
+on:
+  # main is covered by release.yml, which calls this workflow as its first
+  # job -- listing it here too would run every check twice per release.
+  push:
+    branches-ignore: [main]
+  pull_request:
+  workflow_call:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+env:
+  # Override per-repository under Settings > Secrets and variables > Actions
+  # > Variables if you build against a fork or a pinned engine revision.
+  ENGINE_REPO: ${{ vars.ENGINE_REPO || 'bryanthaboi/gen1recomp' }}
+  ENGINE_REF: ${{ vars.ENGINE_REF || 'dev' }}
+  MOD_ID: gen1_mod_menu
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout the mod
+        uses: actions/checkout@v4
+        with:
+          path: mod
+
+      - name: Checkout the engine
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.ENGINE_REPO }}
+          ref: ${{ env.ENGINE_REF }}
+          path: engine
+
+      - name: Install LuaJIT
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y luajit
+
+      - name: Place the mod in the engine tree
+        run: |
+          set -euo pipefail
+          rm -rf "engine/mods/$MOD_ID"
+          cp -r mod "engine/mods/$MOD_ID"
+          rm -rf "engine/mods/$MOD_ID/.git"
+
+      - name: modkit validate
+        working-directory: engine
+        run: python3 tools/modkit.py validate "$MOD_ID"
+
+      - name: modkit lint
+        working-directory: engine
+        run: python3 tools/modkit.py lint "$MOD_ID"
+
+      - name: modkit gen2check
+        working-directory: engine
+        run: python3 tools/modkit.py gen2check "mods/$MOD_ID"
+
+      - name: Mod test suite
+        working-directory: engine
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          suites=("mods/$MOD_ID/tests/"*.lua)
+          if [ ${#suites[@]} -eq 0 ]; then
+            echo "::error::no test suite under mods/$MOD_ID/tests"
+            exit 1
+          fi
+          for suite in "${suites[@]}"; do
+            echo "--- $suite"
+            luajit "$suite"
+          done
+
+      - name: Manifest version matches the changelog
+        working-directory: mod
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, re, sys
+          version = json.load(open("manifest.json", encoding="utf-8"))["version"]
+          body = open("CHANGELOG.md", encoding="utf-8").read()
+          if not re.search(r"^##\s*\[?" + re.escape(version) + r"\]?", body, re.M):
+              sys.exit(f"::error::CHANGELOG.md has no heading for {version}")
+          print(f"CHANGELOG.md documents {version}")
+          PY

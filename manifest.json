@@ -1,0 +1,25 @@
+{
+  "id": "gen1_mod_menu",
+  "name": "Gen1ModMenu",
+  "version": "0.1.0",
+  "api": 2,
+  "entry": "main.lua",
+  "profile": "content",
+  "category": "UI",
+  "game_version": ">=0.0.0-0 <2.0.0",
+  "priority": 500,
+  "affects_link": false,
+  "permissions": [
+    "engine_internals"
+  ],
+  "dependencies": [],
+  "optional_dependencies": [],
+  "conflicts": [],
+  "incompatible": [],
+  "games": [
+    "all"
+  ],
+  "experimental": false,
+  "github": "wild1walker/Gen1ModMenu",
+  "description": "Redraws the mod manager: a readable mod list with sorting and filters, and a per-mod OPTIONS page that shows ten rows with their values and a help line instead of four bare boxes."
+}

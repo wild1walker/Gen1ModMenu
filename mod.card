@@ -1,0 +1,39 @@
+-- Sharing metadata read by tooling and the mod manager's detail pane; never
+-- by the loader's merge.
+return {
+  summary = "The mod manager, redrawn: a sortable, filterable mod list and a "
+    .. "per-mod OPTIONS page that shows eleven rows with their values and a "
+    .. "help line instead of four bare boxes.",
+  author = "wild1walker",
+  contact = "https://github.com/wild1walker/Gen1ModMenu",
+  tags = { "ui", "mod manager", "options", "quality-of-life" },
+  differences = {
+    changed = {
+      "MODS is drawn by this mod instead of the engine (PRESENTATION: "
+        .. "VANILLA hands every screen straight back)",
+      "the per-mod OPTIONS page lists eleven options at once, each on one "
+        .. "line with its value, rather than four bordered boxes",
+      "the mod list can be sorted by name, enabled state or problems, and "
+        .. "filtered down to the mods that have options",
+      "Gold draws the OPTIONS page from this mod rather than through "
+        .. "src/ui/OptionRows.lua, which the engine itself marks Gen 1 only",
+    },
+    added = {
+      "a help line under the focused option saying what it accepts",
+      "a RESET DEFAULTS row on every mod's options page",
+      "a mark legend on the ERRORS tab when there is nothing wrong",
+    },
+    known = {
+      "the manager's own behaviour is untouched -- enabling, dependency "
+        .. "closures, profiles, apply-and-restart and safe mode are all "
+        .. "still the engine's, and this mod only draws them",
+      "the launcher's own mod-options screen is a different screen outside "
+        .. "the game, where no mod is loaded, so it is not affected",
+    },
+  },
+  credits = {
+    { who = "Gen1Recomp", for_ = "src/mods/ManagerState.lua and the "
+      .. "Data.screens registry this mod reaches it through" },
+  },
+  compat = { engine = ">=0.0.0-0 <2.0.0", modApi = 2 },
+}
