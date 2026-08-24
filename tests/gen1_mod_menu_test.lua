@@ -521,6 +521,15 @@ do
       end
     end
   end
+  -- the state words, which the info band under the list and the detail
+  -- screen both draw; every mark this mod can produce must have one
+  for _, mark in ipairs(Rows.STATES) do
+    local word = Skin.STRINGS.states[mark]
+    T.check(word ~= nil, mark .. " has a word to spell it out with")
+    fits(word, Skin.LINE_BUDGET, "states." .. mark)
+    checked = checked + 1
+  end
+
   T.check(next(Skin.STRINGS.footer) == nil,
     "no control hints are left to measure")
   T.check(checked >= 10, "the whole chrome vocabulary was measured")

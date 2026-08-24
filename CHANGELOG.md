@@ -4,6 +4,48 @@ All notable changes to Gen1ModMenu are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this mod uses
 [semantic versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2026-08-24
+
+### Changed
+
+- **The list is banded the way Gen1BillsBox bands its storage screen.** A
+  header box across the top, the rows under it, and an info box at the bottom
+  naming what the cursor is on — its `HEADER_TH`, its `INFO_TY`, and its
+  header geometry: `Font.drawBox(0, 0, 20, 3)`, the text a column inside it,
+  and a value right-aligned to x=144, which leaves the last interior column
+  as padding rather than running text up against the border.
+
+- **The header names the page you are on** — `MODS`, `PROFILES`, `ERRORS` —
+  with the position count beside it, instead of the bracketed three-tab strip
+  0.6.0 put there. Left and right still move between them and still wrap.
+
+- **A list row is a single-line box now**, not a four-tile card: a row is one
+  thing, a name, and four of them fill the twelve rows between the two bands.
+  The status still sits at the end of that line, and a healthy mod still has
+  none, so most names get the whole 17 glyphs.
+
+  A mod's options page keeps its four-tile cards. An option row is two things
+  — a label and its value — and both have to be readable at once, which is
+  the shape the game's own OPTION screen uses.
+
+- **The info box carries the focused mod's category and its state in words**
+  (`ENABLED`, `BLOCKED`, `NOT THIS GAME`). Any other row names itself there
+  instead, so the band is never empty on the `PROFILES` or `ERRORS` tabs —
+  and a label too long for its own line is shown in full underneath it.
+
+### Fixed
+
+- **A label with no value beside it lost a glyph to a gap it was not
+  sharing.** `SAVE CURRENT AS..` is 17 of the 17 a row holds and came out as
+  `SAVE CURRENT AS.`; the gap is now only taken out of the budget when there
+  is actually a value to keep clear of.
+
+### Added
+
+- The state words are in `Skin.STRINGS` with the rest of the vocabulary, so
+  the fits-its-row guard measures them, and every mark `Rows.STATES` can
+  produce is asserted to have one.
+
 ## [0.6.0] - 2026-08-24
 
 ### Changed
@@ -321,6 +363,7 @@ all four of these did.
   of the visit. On top of both, the engine's own `Screens.build` falls back
   to its builtin manager if this mod's screen cannot be constructed.
 
+[0.7.0]: https://github.com/wild1walker/Gen1ModMenu/releases/tag/v0.7.0
 [0.6.0]: https://github.com/wild1walker/Gen1ModMenu/releases/tag/v0.6.0
 [0.5.0]: https://github.com/wild1walker/Gen1ModMenu/releases/tag/v0.5.0
 [0.4.0]: https://github.com/wild1walker/Gen1ModMenu/releases/tag/v0.4.0

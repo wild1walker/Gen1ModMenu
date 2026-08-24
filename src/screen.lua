@@ -110,7 +110,7 @@ local function decorate(mod, Rows, Skin, Options, opt, state, Builtin)
     local result = Builtin.moveCursor(self, dir)
     if modern() and self.screen == "list" then
       self.scroll = clampListScroll(self.cursor, self.scroll,
-                                    #self:rowsForScreen(), Skin.CARDS)
+                                    #self:rowsForScreen(), Skin.ROW_COUNT)
     end
     return result
   end
@@ -119,7 +119,7 @@ local function decorate(mod, Rows, Skin, Options, opt, state, Builtin)
     local result = Builtin.goTo(self, screen)
     if modern() and self.screen == "list" then
       self.scroll = clampListScroll(self.cursor, self.scroll,
-                                    #self:rowsForScreen(), Skin.CARDS)
+                                    #self:rowsForScreen(), Skin.ROW_COUNT)
     end
     return result
   end
@@ -204,7 +204,7 @@ local function decorate(mod, Rows, Skin, Options, opt, state, Builtin)
     -- the remembered row may be gone, or may now be a group heading
     self:snapCursor()
     self.scroll = clampListScroll(self.cursor, self.scroll,
-                                  #self:rowsForScreen(), Skin.CARDS)
+                                  #self:rowsForScreen(), Skin.ROW_COUNT)
   end
 
   state.update = function(self)

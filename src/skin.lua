@@ -66,14 +66,22 @@ local INDENT_X = 24        -- tile column 3, where a card's value line starts
 -- being edited -- a footer saying where you are, not something you navigate.
 local MARGIN_ROW, CAPTION_ROW = 16, 17
 
--- The list's own tabs are navigation, not a footer, so they sit at the top
--- as a title bar: the names on row 0, a rule under them on row 1, and the
--- cards from row 2 -- which puts the last of the four at rows 14 to 17 and
--- fills the screen exactly.
-local TITLE_ROW, TITLE_RULE, LIST_CARD_TOP = 0, 1, 2
--- The title bar carries no cursor, so it starts a column left of the cards
--- and gets that glyph back: the strip is 16 of the 18 the interior holds.
-local TITLE_X = 8
+-- The list is banded the way Gen1BillsBox bands its storage screen: a header
+-- box across the top, the rows under it, and an info box at the bottom
+-- naming what the cursor is on.  Its own header is the geometry copied here
+-- -- Font.drawBox(0, 0, 20, 3), the title a column inside it, and a value
+-- right-aligned to x=144, which leaves the last interior column as padding
+-- rather than running text up against the border.
+local HEADER_TH = 3               -- tiles, as Gen1BillsBox's HEADER_TH
+local INFO_TY = 15                -- the info box's top, as its INFO_TY
+local HEADER_RIGHT = 144          -- where a right-aligned header value ends
+
+-- A list row is one thing -- a name -- so it is a three-tile box with a
+-- single line in it, and four of those fill the twelve rows between the two
+-- bands.  An OPTION row is two things, a label and its value, which is why
+-- the options page keeps the four-tile cards the game's own OPTION screen
+-- uses and this does not.
+local ROW_TOP, ROW_H, ROW_COUNT = 3, 3, 4
 
 -- Every fixed word this screen says, in one place.
 --
@@ -84,7 +92,9 @@ local TITLE_X = 8
 -- "START:APPLY B:EXI" before the guard existed.
 Skin.STRINGS = {
   line = {
-    tabs = { "[MODS] PROF ERRS", "MODS [PROF] ERRS", "MODS PROF [ERRS]" },
+    -- the header names the page you are on; left and right move between
+    -- them, and wrap, which is the engine's own adjustOrTab
+    pages = { "MODS", "PROFILES", "ERRORS" },
     manager = "MOD MANAGER",
     permissions = "PERMISSIONS",
     errors = "ERRORS",
@@ -95,6 +105,14 @@ Skin.STRINGS = {
     more = " MORE",
     changed = "CHANGED",
   },
+  -- A mod's state in words, for the two places that have room for the word
+  -- rather than the four-glyph mark a list row carries: the info band under
+  -- the list, and the detail screen's own status line.
+  states = {
+    ON = "ENABLED", OFF = "DISABLED", STGD = "STAGED",
+    ERR = "FAILED", BLKD = "BLOCKED", SKIP = "NOT THIS GAME",
+  },
+
   -- No control hints anywhere.  Every screen here is A to choose, B to go
   -- back and the d-pad to move, which is every other menu in the game, and
   -- two lines of the sixteen spent restating it was two lines the cards
@@ -103,9 +121,11 @@ Skin.STRINGS = {
 }
 
 local S = Skin.STRINGS
-local TABS = S.line.tabs
+local PAGES = S.line.pages
 
 Skin.CARDS = CARDS
+-- how many rows the LIST shows; the options page still shows CARDS
+Skin.ROW_COUNT = ROW_COUNT
 
 -- The options page sets its own window, so it also has to do its own clamp
 -- (see clampOptionScroll): the engine's is OptionRows.clampScroll, sized for
@@ -187,12 +207,13 @@ local function drawCard(Font, Theme, top, label, value, mark, focused)
   Font.drawBox(0, top, COLS, CARD_H)
   love.graphics.setColor(0, 0, 0, 1)
   Font.draw(fit(Font, label, EDGE_X - LABEL_X), LABEL_X, (top + 1) * 8)
-  local stop = EDGE_X
+  local stop, gap = EDGE_X, 0
   if mark and mark ~= "" then
     stop = rightAt(Font, mark, EDGE_X, (top + 2) * 8)
+    gap = 8
   end
   if value and value ~= "" then
-    Font.draw(fit(Font, value, stop - INDENT_X - 8), INDENT_X, (top + 2) * 8)
+    Font.draw(fit(Font, value, stop - INDENT_X - gap), INDENT_X, (top + 2) * 8)
   end
   if focused then Font.drawCode(Theme.cursor, CURSOR_X, (top + 1) * 8) end
 end
@@ -239,6 +260,43 @@ function Skin.clampPlainScroll(index, scroll, total)
   local tail = math.max(0, total - CARDS)
   if scroll > tail then return tail end
   return scroll
+end
+
+-- Gen1BillsBox's drawHeader, with a page name instead of a box number: a
+-- full-width three-tile box, the text a column inside it, and a value
+-- right-aligned to x=144.  Used for both bands, since the info box at the
+-- bottom is the same shape.
+local function drawBand(Font, top, left, right)
+  love.graphics.setColor(0, 0, 0, 1)
+  Font.drawBox(0, top, COLS, HEADER_TH)
+  love.graphics.setColor(0, 0, 0, 1)
+  -- the gap is owed to a value, so a line without one keeps that glyph:
+  -- "SAVE CURRENT AS.." is 17 of the 17 a row holds, and lost its last dot
+  -- to a gap it was not sharing with anything
+  local stop, gap = HEADER_RIGHT, 0
+  if right and right ~= "" then
+    stop = rightAt(Font, right, HEADER_RIGHT, (top + 1) * 8)
+    gap = 8
+  end
+  if left and left ~= "" then
+    Font.draw(fit(Font, left, stop - LABEL_X - gap), LABEL_X, (top + 1) * 8)
+  end
+end
+
+-- One list row: a three-tile box with the name on its single line, the
+-- cursor in the margin beside it, and the status right-aligned against the
+-- far edge.  A healthy mod has no status, so most names get the whole line.
+local function drawRowBox(Font, Theme, top, label, mark, focused)
+  love.graphics.setColor(0, 0, 0, 1)
+  Font.drawBox(0, top, COLS, ROW_H)
+  love.graphics.setColor(0, 0, 0, 1)
+  local stop, gap = EDGE_X, 0
+  if mark and mark ~= "" then
+    stop = rightAt(Font, mark, EDGE_X, (top + 1) * 8)
+    gap = 8
+  end
+  Font.draw(fit(Font, label, stop - LABEL_X - gap), LABEL_X, (top + 1) * 8)
+  if focused then Font.drawCode(Theme.cursor, CURSOR_X, (top + 1) * 8) end
 end
 
 -- ------- the renderer
@@ -288,59 +346,59 @@ local function newRenderer(mod, Rows, opt, Builtin)
     local rows = state:rowsForScreen()
     local scroll = math.max(1, state.scroll or 1)
 
-    for slot = 1, CARDS do
-      local row = rows[scroll + slot - 1]
+    local focused
+    for slot = 1, ROW_COUNT do
+      local i = scroll + slot - 1
+      local row = rows[i]
       if not row then break end
-      -- A card is a whole framed box, so a row that carries no readable
-      -- label comes out as an empty one -- which is what a profile saved
-      -- without a name looks like on the PROFILES tab.  Say so instead.
+      if i == state.cursor then focused = row end
+      -- A row that carries no readable label -- a profile saved without a
+      -- name -- would otherwise draw as an empty box.
       local label = row.label
       if label == nil or tostring(label):match("^%s*$") then
         label = S.line.unnamed
       end
-      -- The category rides on the card's second line beside the status.  A
-      -- heading row would cost a whole card of the four there are, and the
-      -- sort still groups the list whether or not it says so out loud.
-      drawCard(Font, Theme, LIST_CARD_TOP + (slot - 1) * CARD_H,
-               label, row.category,
-               row.state ~= "ON" and row.state or nil,
-               (scroll + slot - 1) == state.cursor)
+      drawRowBox(Font, Theme, ROW_TOP + (slot - 1) * ROW_H, label,
+                 row.state ~= "ON" and row.state or nil, i == state.cursor)
     end
 
-    -- ------- the title bar
+    -- ------- the header band
     --
-    -- A notice wants the title's line and is the more urgent of the two, so
-    -- the tabs stand down while one is up rather than being painted over --
-    -- overdraw would leave them stacked in the same place and only look
-    -- right by accident.
+    -- A notice wants the header's line and is the more urgent of the two, so
+    -- the page name stands down while one is up rather than being painted
+    -- over -- overdraw would leave them stacked in the same place and only
+    -- look right by accident.
     if state.notice then
-      Font.draw(fit(Font, state.notice, EDGE_X - TITLE_X), TITLE_X,
-                TITLE_ROW * 8)
-      return
-    end
-
-    -- Drawn from column 1, not 2: nothing on this row has a cursor beside
-    -- it, and the strip is 16 glyphs of the 18 the interior holds.
-    Font.draw(TABS[state.tab] or TABS[1], TITLE_X, TITLE_ROW * 8)
-
-    local total, ordinal = 0, 0
-    for i, row in ipairs(rows) do
-      if not (row.header or row.inert) then
-        total = total + 1
-        if i == state.cursor then ordinal = total end
+      drawBand(Font, 0, state.notice, nil)
+    else
+      local total, ordinal = 0, 0
+      for i, row in ipairs(rows) do
+        if not (row.header or row.inert) then
+          total = total + 1
+          if i == state.cursor then ordinal = total end
+        end
       end
+      drawBand(Font, 0, PAGES[state.tab] or PAGES[1],
+               total > 0 and (math.max(ordinal, 1) .. "/" .. total) or nil)
     end
 
-    -- The rule runs under the tabs and stops short of the count, so the two
-    -- share row 1 without meeting.  There is no more-arrow on this screen:
-    -- the cards reach row 17 and the count already says there is more.
-    local stop = RULE_TO
-    if total > 0 then
-      local text = math.max(ordinal, 1) .. "/" .. total
-      local x = rightAt(Font, text, EDGE_X, TITLE_RULE * 8)
-      stop = math.floor(x / 8) - 2
+    -- ------- the info band
+    --
+    -- Gen1BillsBox spends its bottom three rows on "one line naming what the
+    -- cursor is on", and so does this: the focused mod's category, and its
+    -- state in the word the detail screen uses rather than the four-glyph
+    -- mark the row carries.
+    local left, right
+    if focused and focused.mod then
+      left = focused.category
+      right = S.states[focused.state or "ON"]
+    elseif focused then
+      -- Anything that is not a mod names itself here instead, which is what
+      -- keeps the band from sitting empty on the other two tabs -- and shows
+      -- a label in full when the row above had to cut it.
+      left = focused.label
     end
-    rule(Font, TITLE_RULE, RULE_FROM, stop)
+    drawBand(Font, INFO_TY, left, right)
   end
 
   -- ------- detail
@@ -359,10 +417,8 @@ local function newRenderer(mod, Rows, opt, Builtin)
     pair(Font, m.name or m.id, m.version and ("v" .. m.version) or nil, 1)
     rule(Font, 2)
 
-    local words = { STGD = "STAGED", OFF = "DISABLED", ERR = "FAILED",
-                    BLKD = "BLOCKED", SKIP = "NOT THIS GAME", ON = "ENABLED" }
     local state_ = R.stateOf(state, m)
-    pair(Font, words[state_] or state_,
+    pair(Font, S.states[state_] or state_,
          (m.category or "OTHER") .. "/" .. (m.profile or "content"), 3)
 
     local actionTop = math.max(5, 17 - #rows)

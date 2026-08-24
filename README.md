@@ -71,21 +71,39 @@ The full word is always one A-press away, on the mod's own detail screen —
 **All three tabs** — `MODS`, `PROF` and `ERRS` — are drawn this way, and so
 is a mod's options page.
 
-The list wears its tabs as a **title bar**: the names on the top row with the
-active one bracketed, a rule under them, the position count at the end of
-that rule, and the cards from row 2 — which puts the last of the four at the
-very bottom of the screen.
+The list is banded the way **Gen1BillsBox** bands its storage screen — a
+header box across the top, the rows under it, and an info box at the bottom
+naming what the cursor is on. Same geometry as that mod's own header: a
+full-width three-tile box, the text a column inside it, and a value
+right-aligned to x=144.
+
+The header names the page you are on. Left and right move between `MODS`,
+`PROFILES` and `ERRORS`, and **wrap** at both ends.
 
 ```
- [MODS] PROF ERRS
- ============= 5/12
++------------------+
+| MODS        5/12 |
++------------------+
 +------------------+
 | Gen1AutoContinue |
-|   QOL            |
++------------------+
++------------------+
+|>Gen1Dex      BLKD|
++------------------+
+    ...
++------------------+
+| UI       BLOCKED |
 +------------------+
 ```
 
-Left and right move between the tabs and **wrap** at both ends.
+A list row is one thing — a name — so it is a single-line box, and four fit
+between the two bands. An option row is two things, a label and its value,
+which is why a mod's options page keeps the four-tile cards the game's own
+OPTION screen uses and the list does not.
+
+The info box carries the focused mod's category and its state in words. Any
+other row names itself there instead, which is also how a label too long for
+its own line gets shown in full.
 
 A mod's options page keeps its caption at the bottom instead, because that
 line names the mod being edited — it says where you are rather than being
