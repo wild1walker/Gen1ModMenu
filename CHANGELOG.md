@@ -4,6 +4,33 @@ All notable changes to Gen1ModMenu are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this mod uses
 [semantic versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-08-24
+
+### Changed
+
+- **The list's tabs moved to the top, as a title bar.** `MODS PROF ERRS` sat
+  on the bottom caption line, where the game's OPTION screen puts `CANCEL` —
+  which is the right place for a footer that says where you are, and the
+  wrong one for something you navigate with. They are now the top row, with
+  the active tab bracketed, a rule under them, the position count at the end
+  of that rule, and the cards starting at row 2.
+
+  The four cards run to row 17 now, filling the screen, so the list has no
+  spare line: its more-arrow is gone (the count already says there is more)
+  and a notice takes the title row while it is up.
+
+- **A mod's options page keeps its caption at the bottom.** That line names
+  the mod being edited rather than being something you move between, and
+  leaving it there keeps the row above it for the help line.
+
+### Notes
+
+- **Left and right already wrapped between the tabs** — `clampIndex` in
+  `src/mods/ManagerState.lua` answers `n` for an index below 1 and `1` for
+  one above `n`, and nothing in this mod touches `adjustOrTab`. There is a
+  test pinning that, so it stays true. It was likely just hard to see while
+  the tabs were a line of small text at the bottom of the screen.
+
 ## [0.5.0] - 2026-08-24
 
 ### Added
@@ -294,6 +321,7 @@ all four of these did.
   of the visit. On top of both, the engine's own `Screens.build` falls back
   to its builtin manager if this mod's screen cannot be constructed.
 
+[0.6.0]: https://github.com/wild1walker/Gen1ModMenu/releases/tag/v0.6.0
 [0.5.0]: https://github.com/wild1walker/Gen1ModMenu/releases/tag/v0.5.0
 [0.4.0]: https://github.com/wild1walker/Gen1ModMenu/releases/tag/v0.4.0
 [0.3.1]: https://github.com/wild1walker/Gen1ModMenu/releases/tag/v0.3.1

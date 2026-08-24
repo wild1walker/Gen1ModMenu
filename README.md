@@ -69,9 +69,27 @@ The full word is always one A-press away, on the mod's own detail screen —
 `ENABLED`, `DISABLED`, `FAILED`, `BLOCKED`, `NOT THIS GAME`.
 
 **All three tabs** — `MODS`, `PROF` and `ERRS` — are drawn this way, and so
-is a mod's options page. Under the cards sits the position counter and the
-scroll arrow, and under those a caption line: the tabs on the list, and the
-mod's name on its options page, where the OPTION screen puts `CANCEL`.
+is a mod's options page.
+
+The list wears its tabs as a **title bar**: the names on the top row with the
+active one bracketed, a rule under them, the position count at the end of
+that rule, and the cards from row 2 — which puts the last of the four at the
+very bottom of the screen.
+
+```
+ [MODS] PROF ERRS
+ ============= 5/12
++------------------+
+| Gen1AutoContinue |
+|   QOL            |
++------------------+
+```
+
+Left and right move between the tabs and **wrap** at both ends.
+
+A mod's options page keeps its caption at the bottom instead, because that
+line names the mod being edited — it says where you are rather than being
+something you navigate — and it leaves room above it for the help line.
 
 A row that carries no readable label — a profile saved without a name — draws
 as `(NO NAME)` rather than as an empty box.

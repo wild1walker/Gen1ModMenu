@@ -453,7 +453,16 @@ local RealTheme = require("src.ui.Theme")
 RealFont.load(Fixtures)
 RealTheme.load(Fixtures)
 
-local LEFT, RIGHT, TOP, BOTTOM = 8, 152, 8, 136
+local LEFT, RIGHT = 8, 152
+
+-- What each kind of screen may draw on.  The carded screens are frameless
+-- white paper, so the list's title bar on row 0 and the options page's
+-- caption on row 17 are both legitimate; the framed ones own rows 0 and 17
+-- with their border and may only use the interior.
+local function boundsFor(screen)
+  if screen == "list" or screen == "options" then return 0, 136 end
+  return 8, 128
+end
 
 -- Every character this screen draws has to exist in the Game Boy charmap.
 -- It has no + * ~ < > = & _ | glyphs, and one it does not carry is rendered
@@ -629,10 +638,11 @@ local function renderCase(name, screen, setup, overrides)
   state:draw()
 
   T.eq(calls.draw, 0, name .. ": the modern renderer drew it")
+  local top, bottom = boundsFor(screen)
   local worst
   for _, mark in ipairs(marks) do
     if mark.x < LEFT or mark.x + mark.w > RIGHT
-        or mark.y < TOP or mark.y > BOTTOM then
+        or mark.y < top or mark.y > bottom then
       worst = worst or mark
     end
   end
@@ -766,6 +776,30 @@ do
     if m.what == Skin.STRINGS.line.unnamed then said = true end
   end
   T.check(said, "an unnamed row says so rather than drawing an empty card")
+end
+
+-- Left and right move between the three tabs, and wrap at both ends. The
+-- engine's clampIndex already does this (i < 1 answers n, i > n answers 1),
+-- and none of the decoration touches adjustOrTab -- asserted so that stays
+-- true rather than taken on trust.
+do
+  local state, Builtin = fakeManager()
+  function Builtin.adjustOrTab(self, dir)
+    local n = 3
+    local i = self.tab + dir
+    if i < 1 then i = n elseif i > n then i = 1 end
+    self.tab = i
+  end
+  Screen.decorate(modStub, Rows, Skin, Options, reader(), state, Builtin)
+
+  state.tab = 3
+  state:adjustOrTab(1)
+  T.eq(state.tab, 1, "right from the last tab wraps to the first")
+  state:adjustOrTab(-1)
+  T.eq(state.tab, 3, "and left from the first wraps back to the last")
+  state.tab = 1
+  state:adjustOrTab(1)
+  T.eq(state.tab, 2, "and an ordinary step is an ordinary step")
 end
 
 -- ------- START and SELECT on the mod list

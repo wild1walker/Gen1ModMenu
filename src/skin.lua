@@ -62,7 +62,18 @@ local INDENT_X = 24        -- tile column 3, where a card's value line starts
 
 -- The row the more-arrow and the position counter share, and the caption
 -- line under it: exactly where OptionRows puts its own arrow and its CANCEL.
+-- The per-mod options page keeps both, because its bottom line names the mod
+-- being edited -- a footer saying where you are, not something you navigate.
 local MARGIN_ROW, CAPTION_ROW = 16, 17
+
+-- The list's own tabs are navigation, not a footer, so they sit at the top
+-- as a title bar: the names on row 0, a rule under them on row 1, and the
+-- cards from row 2 -- which puts the last of the four at rows 14 to 17 and
+-- fills the screen exactly.
+local TITLE_ROW, TITLE_RULE, LIST_CARD_TOP = 0, 1, 2
+-- The title bar carries no cursor, so it starts a column left of the cards
+-- and gets that glyph back: the strip is 16 of the 18 the interior holds.
+local TITLE_X = 8
 
 -- Every fixed word this screen says, in one place.
 --
@@ -171,8 +182,7 @@ end
 -- One framed card.  `value` is the indented second line and `mark` is
 -- right-aligned on that same line, so on the mod list a card's category and
 -- its status sit at opposite ends of it.
-local function drawCard(Font, Theme, slot, label, value, mark, focused)
-  local top = (slot - 1) * CARD_H
+local function drawCard(Font, Theme, top, label, value, mark, focused)
   love.graphics.setColor(0, 0, 0, 1)
   Font.drawBox(0, top, COLS, CARD_H)
   love.graphics.setColor(0, 0, 0, 1)
@@ -211,7 +221,8 @@ function Skin.drawPlainRows(ui, game, rows, index, scroll)
       local ok, text = pcall(row.value, game)
       value = ok and tostring(text or "") or ""
     end
-    drawCard(Font, Theme, slot, row.label, value, nil, (scroll + slot) == index)
+    drawCard(Font, Theme, (slot - 1) * CARD_H, row.label, value, nil,
+             (scroll + slot) == index)
   end
   if #rows > scroll + CARDS then
     Font.drawCode(Theme.moreArrow, 18 * 8, MARGIN_ROW * 8)
@@ -290,10 +301,27 @@ local function newRenderer(mod, Rows, opt, Builtin)
       -- The category rides on the card's second line beside the status.  A
       -- heading row would cost a whole card of the four there are, and the
       -- sort still groups the list whether or not it says so out loud.
-      drawCard(Font, Theme, slot, label, row.category,
+      drawCard(Font, Theme, LIST_CARD_TOP + (slot - 1) * CARD_H,
+               label, row.category,
                row.state ~= "ON" and row.state or nil,
                (scroll + slot - 1) == state.cursor)
     end
+
+    -- ------- the title bar
+    --
+    -- A notice wants the title's line and is the more urgent of the two, so
+    -- the tabs stand down while one is up rather than being painted over --
+    -- overdraw would leave them stacked in the same place and only look
+    -- right by accident.
+    if state.notice then
+      Font.draw(fit(Font, state.notice, EDGE_X - TITLE_X), TITLE_X,
+                TITLE_ROW * 8)
+      return
+    end
+
+    -- Drawn from column 1, not 2: nothing on this row has a cursor beside
+    -- it, and the strip is 16 glyphs of the 18 the interior holds.
+    Font.draw(TABS[state.tab] or TABS[1], TITLE_X, TITLE_ROW * 8)
 
     local total, ordinal = 0, 0
     for i, row in ipairs(rows) do
@@ -302,21 +330,17 @@ local function newRenderer(mod, Rows, opt, Builtin)
         if i == state.cursor then ordinal = total end
       end
     end
-    if total > 0 then
-      Font.draw(math.max(ordinal, 1) .. "/" .. total, LABEL_X, MARGIN_ROW * 8)
-    end
-    if scroll + CARDS - 1 < #rows then
-      Font.drawCode(Theme.moreArrow, 18 * 8, MARGIN_ROW * 8)
-    end
 
-    -- The tabs are the caption, where the OPTION screen puts CANCEL.  A
-    -- notice wants that same line and is the more urgent of the two, so the
-    -- tabs stand down for as long as one is up rather than being painted
-    -- over -- overdraw would leave the two of them stacked in the same place
-    -- and only look right by accident.
-    if not state.notice then
-      Font.draw(TABS[state.tab] or TABS[1], LABEL_X, CAPTION_ROW * 8)
+    -- The rule runs under the tabs and stops short of the count, so the two
+    -- share row 1 without meeting.  There is no more-arrow on this screen:
+    -- the cards reach row 17 and the count already says there is more.
+    local stop = RULE_TO
+    if total > 0 then
+      local text = math.max(ordinal, 1) .. "/" .. total
+      local x = rightAt(Font, text, EDGE_X, TITLE_RULE * 8)
+      stop = math.floor(x / 8) - 2
     end
+    rule(Font, TITLE_RULE, RULE_FROM, stop)
   end
 
   -- ------- detail
@@ -475,7 +499,7 @@ local function newRenderer(mod, Rows, opt, Builtin)
       end
       -- the dot marks a value the player has moved off the author's default;
       -- it sits at the end of the value line, where there is room for it
-      drawCard(Font, Theme, slot, row.label, value,
+      drawCard(Font, Theme, (slot - 1) * CARD_H, row.label, value,
                row.changed and S.line.changed or nil, i == state.cursor)
     end
 
@@ -548,12 +572,16 @@ local function newRenderer(mod, Rows, opt, Builtin)
       love.graphics.setColor(1, 1, 1, 1)
       love.graphics.rectangle("fill", 0, 0, 160, 144)
       love.graphics.setColor(0, 0, 0, 1)
-      if state.screen == "list" then R.drawList(state) else R.drawOptions(state) end
-      -- the notice takes the caption line, which is the only line either
-      -- card screen has spare
-      if state.notice then
-        Font.draw(fit(Font, state.notice, EDGE_X - LABEL_X), LABEL_X,
-                  CAPTION_ROW * 8)
+      if state.screen == "list" then
+        -- the list puts its own notice on its title row, which is the line
+        -- it has spare; row 17 is inside its fourth card
+        R.drawList(state)
+      else
+        R.drawOptions(state)
+        if state.notice then
+          Font.draw(fit(Font, state.notice, EDGE_X - LABEL_X), LABEL_X,
+                    CAPTION_ROW * 8)
+        end
       end
       love.graphics.setColor(1, 1, 1, 1)
       -- the confirm/notice modal stays the engine's: it is a centred box with

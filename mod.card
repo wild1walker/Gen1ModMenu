@@ -9,6 +9,9 @@ return {
   tags = { "ui", "mod manager", "options", "quality-of-life" },
   differences = {
     changed = {
+      "the list's MODS/PROF/ERRS tabs are a title bar on the top row, with "
+        .. "the active one bracketed and the position count on the rule "
+        .. "beneath them; left and right wrap between the three",
       "MODS is drawn by this mod instead of the engine (STYLE: VANILLA hands "
         .. "every screen straight back)",
       "the mod list and the per-mod OPTIONS page are drawn as framed cards, "
