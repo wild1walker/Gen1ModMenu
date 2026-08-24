@@ -14,9 +14,9 @@
 
 A UI mod for [Gen1Recomp](https://github.com/bryanthaboi/gen1recomp): it
 redraws the in-game **MODS** screen. The mod list gets a status column,
-sorting and filters; the per-mod **OPTIONS** page gets eleven rows on screen
-instead of four, each with its value beside it and a line underneath saying
-what it accepts.
+sorting and filters; the per-mod **OPTIONS** page gets a help line, a
+`CHANGED` marker and a `RESET DEFAULTS` row — all in the same framed-card
+idiom the game's own OPTION screen uses.
 
 Works on Red, Blue, Yellow and Gold/Silver (mod api 2). Nothing about how the
 manager *behaves* changes — enabling, dependency closures, staged changes,
@@ -33,41 +33,30 @@ mod draws them.
 The manifest already carries `"github": "wild1walker/Gen1ModMenu"`, so the
 launcher offers updates and other versions on its own.
 
-## The options page
+## The look
 
-This is the screen the mod exists for. Vanilla draws it through the engine's
-shared option widget: four bordered 20×4 boxes, the label on one line and the
-value on the next, four options visible at a time and nothing else on screen.
-A mod with seven rows is two pages, and there is no room to say what any of
-them do.
+Both list screens are drawn in the game's own **OPTION-screen idiom** — the
+same geometry `src/ui/OptionRows.lua` uses for `TEXT SPEED` and
+`BATTLE ANIMATION`: full-width framed cards down the screen, the label on the
+first line inside each and its value indented on the second, the cursor in the
+margin beside the label.
 
-Here every option is one line — label on the left, value on the right — so
-**eleven fit at once**, under the mod's name and version. Below them, a help
-line for whichever row the cursor is on, read straight off the schema:
+A card holds two whole lines, of 17 and 16 glyphs. That is what makes these
+screens readable — every mod name and every option value is shown in full,
+because neither has to share a row with the other.
 
-| Row type | Help line |
-| --- | --- |
-| toggle | `ON / OFF` |
-| choice | every choice label, `ONCE / N BEEPS / VANILLA` |
-| number | the range, `1-8`, and the step when it is not 1 |
-| text | `UP TO 12 CHARS` |
+```
++------------------+     +------------------+
+| Gen1AutoContinue |     | SORT BY          |
+|   QOL            |     |   CATEGORY       |
++------------------+     +------------------+
+```
 
-A `.` beside a value means that row differs from the default its author
-shipped, and **`RESET DEFAULTS`** at the bottom of the list puts every one of
-them back.
+On the mod list the second line carries the mod's **category** on the left and
+its **status** on the right. A mod that is enabled and running shows no status
+at all — the column is for the exceptions:
 
-There is no description field in the engine's option schema
-(`docs/mod-option-schema.md` is `key`, `type`, `label`, `default`, `choices`,
-`min`, `max`, `step`, `maxLen`, `visible_if`), so the help line says what the
-row *accepts* rather than inventing prose the author never wrote.
-
-## The mod list
-
-A mod that is enabled and running carries **no mark at all** — a column
-reading `ON` eleven times over is not information, and leaving it blank hands
-three more glyphs to every name on the screen. The marks are the exceptions:
-
-| Column | Reads |
+| Status | Reads |
 | --- | --- |
 | *(blank)* | enabled and running |
 | `OFF` | disabled |
@@ -76,9 +65,38 @@ three more glyphs to every name on the screen. The marks are the exceptions:
 | `BLKD` | a dependency is not satisfied |
 | `SKIP` | enabled and fine, but not for this game |
 
-The same six appear as a legend on the `ERRORS` tab whenever there is nothing
-wrong to show there. The full word is always one A-press away on the mod's
-own detail screen.
+All six are spelled out on the `ERRORS` tab whenever there is nothing wrong to
+show there, and the full word is always one A-press away on the mod's own
+detail screen.
+
+Under the cards sits the position counter and the scroll arrow, and under
+those a caption line — the `MODS / PROF / ERRS` tabs on the list, and the
+mod's name on its options page, where the OPTION screen puts `CANCEL`.
+
+There are **no control hints**. Every screen here is A to choose, B to go
+back and the d-pad to move, the same as every other menu in the game.
+
+## The options page
+
+On a mod's options page the second line is the value, with `CHANGED`
+right-aligned against it on any row you have moved off the author's default.
+Below the cards, a help line for whichever row the cursor is on, read straight
+off the schema:
+
+| Row type | Help line |
+| --- | --- |
+| toggle | `ON / OFF` |
+| choice | every choice label, `ONCE / N BEEPS / VANILLA` |
+| number | the range, `1-8`, and the step when it is not 1 |
+| text | `UP TO 12 CHARS` |
+
+**`RESET DEFAULTS`** is the last card, and puts every row back to what its
+author shipped.
+
+There is no description field in the engine's option schema
+(`docs/mod-option-schema.md` is `key`, `type`, `label`, `default`, `choices`,
+`min`, `max`, `step`, `maxLen`, `visible_if`), so the help line says what the
+row *accepts* rather than inventing prose the author never wrote.
 
 ## Options
 

@@ -63,7 +63,11 @@ local function byName(a, b)
   return tostring(a.id) < tostring(b.id)
 end
 
-local function grouped(entries, groupOf, order)
+-- `flat` drops the heading rows and keeps the grouping as an ORDER instead.
+-- The card layout has no cheap way to draw a heading -- a heading would cost
+-- a whole card, and four cards are the whole screen -- so with cards the
+-- category rides on the card's second line beside the status instead.
+local function grouped(entries, groupOf, order, flat)
   local buckets, names = {}, {}
   for _, entry in ipairs(entries) do
     local name = groupOf(entry)
@@ -86,10 +90,10 @@ local function grouped(entries, groupOf, order)
   for _, name in ipairs(names) do
     local bucket = buckets[name]
     table.sort(bucket, byName)
-    rows[#rows + 1] = { header = true, label = name }
+    if not flat then rows[#rows + 1] = { header = true, label = name } end
     for _, entry in ipairs(bucket) do
       rows[#rows + 1] = { mod = entry.mod, label = entry.name or entry.id,
-                          state = entry.state,
+                          state = entry.state, category = entry.category,
                           glyph = Rows.glyphOf(entry.state) }
     end
   end
@@ -101,8 +105,8 @@ local SORTS = {}
 -- What the engine does, plus a stable order inside each category.  Vanilla
 -- groups by category but leaves the mods in load order, so the same install
 -- lists them differently after a priority change.
-SORTS.category = function(entries)
-  return grouped(entries, function(e) return e.category or "OTHER" end)
+SORTS.category = function(entries, flat)
+  return grouped(entries, function(e) return e.category or "OTHER" end, nil, flat)
 end
 
 SORTS.name = function(entries)
@@ -112,21 +116,21 @@ SORTS.name = function(entries)
   local rows = {}
   for _, entry in ipairs(sorted) do
     rows[#rows + 1] = { mod = entry.mod, label = entry.name or entry.id,
-                        state = entry.state,
+                        state = entry.state, category = entry.category,
                         glyph = Rows.glyphOf(entry.state) }
   end
   return rows
 end
 
-SORTS.enabled = function(entries)
+SORTS.enabled = function(entries, flat)
   return grouped(entries, function(e)
     return e.state == "OFF" and "DISABLED" or "ENABLED"
-  end, { ENABLED = 1, DISABLED = 2 })
+  end, { ENABLED = 1, DISABLED = 2 }, flat)
 end
 
 -- Anything that wants the player's attention, first.  STGD is a problem in
 -- the same sense: it is a change that has not taken effect yet.
-SORTS.status = function(entries)
+SORTS.status = function(entries, flat)
   return grouped(entries, function(e)
     if e.state == "ERR" or e.state == "BLKD" then return "PROBLEMS" end
     if e.state == "STGD" then return "STAGED" end
@@ -134,7 +138,7 @@ SORTS.status = function(entries)
     if e.state == "SKIP" then return "OTHER GAME" end
     return "RUNNING"
   end, { PROBLEMS = 1, STAGED = 2, RUNNING = 3, DISABLED = 4,
-         ["OTHER GAME"] = 5 })
+         ["OTHER GAME"] = 5 }, flat)
 end
 
 function Rows.sortNames()
@@ -165,14 +169,16 @@ function Rows.arrange(entries, prefs, keep)
   end
 
   if #kept == 0 then
-    -- A header, not a mod row: ManagerState:moveCursor skips headers, so an
-    -- empty list parks the cursor rather than letting A open nothing.
-    return { { header = true,
-      label = installed == 0 and "NO MODS INSTALLED" or "NO MODS MATCH" } }
+    -- Inert rather than a heading when flat: with nothing to skip to,
+    -- moveCursor would leave the cursor on a heading anyway, and activate()
+    -- refuses an inert row just as firmly.
+    local label = installed == 0 and "NO MODS INSTALLED" or "NO MODS MATCH"
+    if prefs.flat then return { { inert = true, label = label } } end
+    return { { header = true, label = label } }
   end
 
   local sort = SORTS[prefs.sort] or SORTS.category
-  return sort(kept)
+  return sort(kept, prefs.flat)
 end
 
 -- ------- the per-mod options page

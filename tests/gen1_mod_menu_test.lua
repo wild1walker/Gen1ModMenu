@@ -241,6 +241,17 @@ local function fakeManager(overrides)
   }, Builtin)
   function state.isStaged() return false end
   function state.runsHere() return true end
+  -- part of the surface being stood in for: the decoration clamps the list's
+  -- scroll against it, because the engine's own clamp is sized for a window
+  -- the cards no longer draw
+  function state:rowsForScreen()
+    if self.screen == "list" then
+      if self.tab == 1 then return self:modRows() end
+      if self.tab == 3 then return self:errorRows(nil) end
+      return {}
+    end
+    return {}
+  end
   function state.schemaFor() return { { key = "k", type = "toggle" } } end
   function state:optionValue(_, row)
     -- nil means "nothing stored", the way the engine's own optionValue reads
@@ -334,7 +345,7 @@ do -- the options page clamps its own scroll, for its own window size
   for i = 1, 20 do state.optionRows[i] = { id = i, label = "R" .. i } end
   state.cursor, state.scroll = 15, 0
   state:updateOptions({})
-  T.eq(state.scroll, 4, "the cursor is pulled into an eleven-row window")
+  T.eq(state.scroll, 15 - Skin.CARDS, "the cursor is pulled into the cards")
   state.cursor, state.scroll = 2, 8
   state:updateOptions({})
   T.eq(state.scroll, 1, "and back up again when it moves the other way")
@@ -378,14 +389,19 @@ do -- the cursor comes back where it was left
   T.eq(forgetful.cursor, 1, "and KEEP CURSOR off starts at the top")
 end
 
-do -- the window the options page draws and the one it clamps to agree
-  local state = decorated({ help_line = false })
-  state.screen = "options"
-  state.optionRows = {}
-  for i = 1, 20 do state.optionRows[i] = { id = i } end
-  state.cursor, state.scroll = 13, 0
-  state:updateOptions({})
-  T.eq(state.scroll, 1, "the help line gives its row back to the list")
+do -- the window the options page draws and the one it clamps to agree, and
+  -- the help line no longer costs a row -- it sits outside the cards
+  for _, help in ipairs({ true, false }) do
+    local state = decorated({ help_line = help })
+    state.screen = "options"
+    state.optionRows = {}
+    for i = 1, 20 do state.optionRows[i] = { id = i } end
+    state.cursor, state.scroll = 13, 0
+    state:updateOptions({})
+    T.eq(state.scroll, 13 - Skin.CARDS,
+      "the options page clamps to the cards with help " ..
+      (help and "on" or "off"))
+  end
 end
 
 -- ------- the renderer, actually run
@@ -407,7 +423,7 @@ local RealTheme = require("src.ui.Theme")
 RealFont.load(Fixtures)
 RealTheme.load(Fixtures)
 
-local LEFT, RIGHT, TOP, BOTTOM = 8, 152, 8, 128
+local LEFT, RIGHT, TOP, BOTTOM = 8, 152, 8, 136
 
 -- Every character this screen draws has to exist in the Game Boy charmap.
 -- It has no + * ~ < > = & _ | glyphs, and one it does not carry is rendered
@@ -466,15 +482,9 @@ do
       end
     end
   end
-  for key, group in pairs(Skin.STRINGS.footer) do
-    for i = 1, 2 do
-      if group[i] then
-        fits(group[i], Skin.FOOTER_BUDGET, "footer." .. key .. "[" .. i .. "]")
-        checked = checked + 1
-      end
-    end
-  end
-  T.check(checked >= 18, "the whole chrome vocabulary was measured")
+  T.check(next(Skin.STRINGS.footer) == nil,
+    "no control hints are left to measure")
+  T.check(checked >= 10, "the whole chrome vocabulary was measured")
 end
 
 -- A label and its own widest value share one 17-glyph row, with a glyph of
@@ -491,7 +501,13 @@ do
       .. tostring(value) .. '" is ' .. need .. "px of " .. Skin.LINE_BUDGET)
   end
 
+  -- A card gives the label and the value a line each, so they no longer
+  -- compete for one row: the label gets the whole first line, and the value
+  -- shares the second with the CHANGED marker right-aligned against it.
+  local VALUE_BUDGET = Skin.LINE_BUDGET - 8 - RealFont.width(Skin.STRINGS.line.changed)
   for _, row in ipairs(Options.schema) do
+    T.check(RealFont.width(row.label) <= Skin.LINE_BUDGET,
+      "option " .. row.key .. "'s label fits its own line")
     local widest = ""
     if row.type == "toggle" then
       widest = "OFF"
@@ -502,11 +518,13 @@ do
     elseif row.type == "number" then
       widest = tostring(row.max or row.default)
     end
-    pairFits(row.label, widest, "option " .. row.key)
+    T.check(RealFont.width(widest) <= VALUE_BUDGET,
+      "option " .. row.key .. "'s widest value fits beside the marker")
   end
 
   -- the reset row this mod adds to every OTHER mod's page, which has no value
-  pairFits("RESET DEFAULTS", nil, "the reset row")
+  T.check(RealFont.width("RESET DEFAULTS") <= Skin.LINE_BUDGET,
+    "the reset row fits its line")
 
   -- the ERRORS-tab legend, drawn as label-plus-mark by the same pair()
   for _, entry in ipairs(Rows.LEGEND) do

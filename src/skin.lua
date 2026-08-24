@@ -38,31 +38,39 @@ local COLS = 20
 local CURSOR_X = 8         -- tile column 1
 local LABEL_X = 16         -- tile column 2
 local EDGE_X = 152         -- one past the last interior column
--- Footers carry no cursor, so they start one column left of everything else.
--- That column is not decoration: "START:APPLY B:EXIT" is 18 glyphs and the
--- interior is 18 columns, so drawn at LABEL_X it loses its last letter --
--- which is exactly what vanilla does, except vanilla draws over the border
--- instead of truncating.
-local FOOT_X = 8
-
--- What a whole-width string on each kind of row has to fit inside.
+-- What a whole-width string has to fit inside, measured from the label
+-- column: the interior less the margin the cursor sits in.
 Skin.LINE_BUDGET = EDGE_X - LABEL_X
-Skin.FOOTER_BUDGET = EDGE_X - FOOT_X
 local RULE_FROM, RULE_TO = 1, 18
 
--- LIST_ROWS must stay 11: ManagerState:moveCursor clamps self.scroll to a
--- window of exactly that many rows, and adjustOrTab pages by it.  Drawing a
--- different number would let the cursor walk out of sight.
-local LIST_TOP, LIST_ROWS = 4, 11
+-- The card viewport, and deliberately the exact geometry
+-- src/ui/OptionRows.lua uses for the game's own OPTION screen: four
+-- full-width 20x4 boxes stacked down the screen, the label on the first line
+-- inside each and its value indented on the second, the cursor in the margin
+-- beside the label.
+--
+-- A card holds two whole lines, of 17 and 16 glyphs.  That is why nothing on
+-- these screens is cut short any more: the layout it replaces fitted eleven
+-- rows on a screen by giving each one a single line to share between a name
+-- and its value, and a name of any length lost that argument.
+--
+-- ManagerState:moveCursor clamps self.scroll to a window of ELEVEN rows, so
+-- the list re-clamps to this number itself (src/screen.lua); left alone, the
+-- cursor would walk seven rows past the bottom card.
+local CARD_H, CARDS = 4, 4
+local INDENT_X = 24        -- tile column 3, where a card's value line starts
+
+-- The row the more-arrow and the position counter share, and the caption
+-- line under it: exactly where OptionRows puts its own arrow and its CANCEL.
+local MARGIN_ROW, CAPTION_ROW = 16, 17
 
 -- Every fixed word this screen says, in one place.
 --
--- `line` is drawn at LABEL_X, which leaves column 1 for the cursor; `footer`
--- is drawn at FOOT_X, which has no cursor and so gets one glyph more.  The
--- suite measures each of these against the budget of the row it belongs to,
--- because a string that overruns does not look like a bug -- it looks like a
--- word with its last letter missing, which is how "START:APPLY B:EXIT"
--- shipped as "START:APPLY B:EXI".
+-- All of it is drawn at LABEL_X, which leaves column 1 for the cursor.  The
+-- suite measures every one against that budget, because a string that
+-- overruns does not look like a bug -- it looks like a word with its last
+-- letter missing, which is how "START:APPLY B:EXIT" shipped as
+-- "START:APPLY B:EXI" before the guard existed.
 Skin.STRINGS = {
   line = {
     tabs = { "[MODS] PROF ERRS", "MODS [PROF] ERRS", "MODS PROF [ERRS]" },
@@ -73,22 +81,19 @@ Skin.STRINGS = {
     noChanges = "NO CHANGES",
     options = "OPTIONS",
     more = " MORE",
-    changed = ".CHANGED",
+    changed = "CHANGED",
   },
-  footer = {
-    mods = { "A:OPEN SEL:TOGGLE", "START:APPLY B:EXIT" },
-    profiles = { "A:APPLY SEL:RENAME", "START:DELETE" },
-    errorsTab = { "UP/DOWN:SCROLL" },
-    permissions = { "DECLARED BY AUTHOR", "NOT ENFORCED" },
-    errors = { "UP/DOWN:SCROLL", "B:BACK" },
-    optionsPage = { nil, "L/R:CHANGE B:DONE" },
-  },
+  -- No control hints anywhere.  Every screen here is A to choose, B to go
+  -- back and the d-pad to move, which is every other menu in the game, and
+  -- two lines of the sixteen spent restating it was two lines the cards
+  -- wanted more.
+  footer = {},
 }
 
 local S = Skin.STRINGS
 local TABS = S.line.tabs
 
-Skin.LIST_ROWS = LIST_ROWS
+Skin.CARDS = CARDS
 
 -- The options page sets its own window, so it also has to do its own clamp
 -- (see clampOptionScroll): the engine's is OptionRows.clampScroll, sized for
@@ -162,6 +167,25 @@ local function pair(Font, label, value, y, gap)
   Font.draw(fit(Font, label, budget), LABEL_X, py)
 end
 
+-- One framed card.  `value` is the indented second line and `mark` is
+-- right-aligned on that same line, so on the mod list a card's category and
+-- its status sit at opposite ends of it.
+local function drawCard(Font, Theme, slot, label, value, mark, focused)
+  local top = (slot - 1) * CARD_H
+  love.graphics.setColor(0, 0, 0, 1)
+  Font.drawBox(0, top, COLS, CARD_H)
+  love.graphics.setColor(0, 0, 0, 1)
+  Font.draw(fit(Font, label, EDGE_X - LABEL_X), LABEL_X, (top + 1) * 8)
+  local stop = EDGE_X
+  if mark and mark ~= "" then
+    stop = rightAt(Font, mark, EDGE_X, (top + 2) * 8)
+  end
+  if value and value ~= "" then
+    Font.draw(fit(Font, value, stop - INDENT_X - 8), INDENT_X, (top + 2) * 8)
+  end
+  if focused then Font.drawCode(Theme.cursor, CURSOR_X, (top + 1) * 8) end
+end
+
 -- ------- the renderer
 
 local function newRenderer(mod, Rows, opt, Builtin)
@@ -178,10 +202,12 @@ local function newRenderer(mod, Rows, opt, Builtin)
 
   local R = {}
 
-  function R.optionWindow()
-    -- the help line gives its row back when it is switched off
-    return opt("help_line") and 11 or 12
-  end
+  -- What the options page shows at once.  It is the card count, not a row
+  -- count: the engine clamps this page with OptionRows.clampScroll, sized for
+  -- the four boxes vanilla draws, and four is what this draws too -- but the
+  -- clamp is still owned here rather than inherited, because the two agreeing
+  -- today is a coincidence and not a contract.
+  function R.optionWindow() return CARDS end
 
   -- ------- one row of a list
 
@@ -205,51 +231,63 @@ local function newRenderer(mod, Rows, opt, Builtin)
 
   function R.drawList(state)
     local rows = state:rowsForScreen()
+    local scroll = math.max(1, state.scroll or 1)
 
-    -- Position goes on the TITLE line, not the tab line: the tab line is
-    -- already 16 glyphs of a 17-glyph run, so a counter beside it lands on
-    -- top of ERRS.  It also replaces the more-arrow the list used to draw,
-    -- which shared its row with the first footer line.
+    -- The ERRORS tab is wrapped prose, a line at a time, and the mark legend
+    -- when there is none.  A card per line of a wrapped sentence would be
+    -- absurd, so that tab is plain lines -- eleven of them, which is what
+    -- ManagerState:moveCursor already clamps the scroll to.
+    if state.tab == 3 then
+      local top, window = 2, 13
+      local last = math.min(#rows, scroll + window - 1)
+      for i = scroll, last do
+        local row = rows[i]
+        local y = top + i - scroll
+        if row.state and row.state ~= "" then
+          pair(Font, row.label, row.state, y)
+        else
+          Font.draw(fit(Font, row.label, EDGE_X - LABEL_X), LABEL_X, y * 8)
+        end
+      end
+      if #rows > last then
+        Font.drawCode(Theme.moreArrow, 18 * 8, (top + window) * 8)
+      end
+      if not state.notice then Font.draw(TABS[state.tab], LABEL_X, 16 * 8) end
+      return
+    end
+
+    for slot = 1, CARDS do
+      local row = rows[scroll + slot - 1]
+      if not row then break end
+      -- The category rides on the card's second line beside the status.  A
+      -- heading row would cost a whole card of the four there are, and the
+      -- sort still groups the list whether or not it says so out loud.
+      drawCard(Font, Theme, slot, row.label, row.category,
+               row.state ~= "ON" and row.state or nil,
+               (scroll + slot - 1) == state.cursor)
+    end
+
     local total, ordinal = 0, 0
     for i, row in ipairs(rows) do
-      if not row.header then
+      if not (row.header or row.inert) then
         total = total + 1
         if i == state.cursor then ordinal = total end
       end
     end
-    -- snapCursor keeps the cursor off headings, so ordinal 0 does not happen
-    -- in the game; clamped anyway rather than ever reading "0/12".
-    pair(Font, state.banner or S.line.manager,
-         total > 0 and (math.max(ordinal, 1) .. "/" .. total) or nil, 1)
-
-    Font.draw(TABS[state.tab] or TABS[1], LABEL_X, 2 * 8)
-    rule(Font, 3)
-
-    local last = math.min(#rows, (state.scroll or 1) + LIST_ROWS - 1)
-    local y = LIST_TOP
-    for i = state.scroll or 1, last do
-      local row = rows[i]
-      if row.header then
-        drawHeader(row.label, y)
-      else
-        -- A healthy enabled mod gets no mark at all.  A column reading ON
-        -- eleven times over is not information, and blanking it hands three
-        -- more glyphs to every label on the screen -- which is the
-        -- difference between Gen1AutoContinue and "Gen1AutoConti".  The
-        -- exceptions are what the column is for, and they now stand out.
-        -- Same rule the engine's own glyphFor uses: healthy answers " ".
-        pair(Font, row.label, row.state ~= "ON" and row.state or nil, y)
-        drawCursor(state, i, y)
-      end
-      y = y + 1
+    if total > 0 then
+      Font.draw(math.max(ordinal, 1) .. "/" .. total, LABEL_X, MARGIN_ROW * 8)
+    end
+    if scroll + CARDS - 1 < #rows then
+      Font.drawCode(Theme.moreArrow, 18 * 8, MARGIN_ROW * 8)
     end
 
-    if state.tab == 1 then
-      R.footer(state, S.footer.mods[1], S.footer.mods[2])
-    elseif state.tab == 2 then
-      R.footer(state, S.footer.profiles[1], S.footer.profiles[2])
-    else
-      R.footer(state, S.footer.errorsTab[1])
+    -- The tabs are the caption, where the OPTION screen puts CANCEL.  A
+    -- notice wants that same line and is the more urgent of the two, so the
+    -- tabs stand down for as long as one is up rather than being painted
+    -- over -- overdraw would leave the two of them stacked in the same place
+    -- and only look right by accident.
+    if not state.notice then
+      Font.draw(TABS[state.tab] or TABS[1], LABEL_X, CAPTION_ROW * 8)
     end
   end
 
@@ -301,7 +339,7 @@ local function newRenderer(mod, Rows, opt, Builtin)
 
   -- ------- permissions / errors
 
-  function R.drawSimple(state, title, line1, line2)
+  function R.drawSimple(state, title)
     Font.draw(title, LABEL_X, 1 * 8)
     rule(Font, 2)
     local rows = state:rowsForScreen()
@@ -330,7 +368,9 @@ local function newRenderer(mod, Rows, opt, Builtin)
     if #rows > last then
       Font.drawCode(Theme.moreArrow, 18 * 8, (top + window) * 8)
     end
-    R.footer(state, line1, line2)
+    if state.notice then
+      Font.draw(fit(Font, state.notice, EDGE_X - LABEL_X), LABEL_X, 16 * 8)
+    end
   end
 
   -- ------- apply
@@ -391,72 +431,43 @@ local function newRenderer(mod, Rows, opt, Builtin)
   function R.drawOptions(state)
     local m = state.currentMod
     local rows = state.optionRows or {}
-    local window = R.optionWindow()
-
     local scroll = state.scroll or 0
 
-    -- The version is the nicer thing to show, but only while the whole list
-    -- is on screen.  Once it scrolls, where-you-are beats what-version, and
-    -- it goes here rather than as an arrow -- the arrow's row is the rule.
-    local corner = m and m.version and ("v" .. m.version) or nil
-    if #rows > window then
-      corner = math.min(state.cursor or 1, #rows) .. "/" .. #rows
-    end
-    pair(Font, (m and (m.name or m.id)) or S.line.options, corner, 1)
-    rule(Font, 2)
-    for slot = 1, window do
+    for slot = 1, CARDS do
       local i = scroll + slot
       local row = rows[i]
       if not row then break end
-      local y = OPT_TOP + slot - 1
       local value = ""
       if row.value then
         local ok, text = pcall(row.value, state.game)
         value = ok and tostring(text or "") or ""
       end
-      -- the changed marker sits outside the value so a numeric value is
-      -- never read as one digit longer than it is
-      local edge = EDGE_X
-      if row.changed then
-        Font.draw(".", (RULE_TO - 1) * 8, y * 8)
-        edge = EDGE_X - 16
-      end
-      local valueX = edge
-      if value ~= "" then valueX = rightAt(Font, value, edge, y * 8) end
-      Font.draw(fit(Font, row.label, valueX - LABEL_X - 8), LABEL_X, y * 8)
-      drawCursor(state, i, y)
+      -- the dot marks a value the player has moved off the author's default;
+      -- it sits at the end of the value line, where there is room for it
+      drawCard(Font, Theme, slot, row.label, value,
+               row.changed and S.line.changed or nil, i == state.cursor)
     end
+
     if opt("help_line") then
-      rule(Font, 14)
       local row = rows[state.cursor]
-      local mark = (row and row.changed) and S.line.changed or nil
-      local budget = EDGE_X - LABEL_X
-      -- the changed marker is the part that must survive, so it is taken out
-      -- of the budget before the vocabulary is trimmed to fit
-      if mark then budget = budget - Font.width(" " .. mark) end
-      local help = row and row.help and trimList(Font, row.help, budget) or nil
-      if mark then help = (help and (help .. " ") or "") .. mark end
-      if help then Font.draw(help, LABEL_X, 15 * 8) end
-    else
-      rule(Font, 15)
+      if row and row.help then
+        Font.draw(trimList(Font, row.help, (18 * 8) - LABEL_X - 8),
+                  LABEL_X, MARGIN_ROW * 8)
+      end
     end
-    R.footer(state, S.footer.optionsPage[1], S.footer.optionsPage[2])
+    if #rows > scroll + CARDS then
+      Font.drawCode(Theme.moreArrow, 18 * 8, MARGIN_ROW * 8)
+    end
+
+    -- whose options these are, and how far down them you are
+    if not state.notice then
+      pair(Font, (m and (m.name or m.id)) or S.line.options,
+           #rows > CARDS and (math.min(state.cursor or 1, #rows) .. "/" .. #rows)
+             or nil, CAPTION_ROW)
+    end
   end
 
   -- ------- shared
-
-  function R.footer(state, line1, line2)
-    if state.notice then
-      Font.draw(fit(Font, state.notice, EDGE_X - FOOT_X), FOOT_X, 16 * 8)
-      return
-    end
-    if line1 then
-      Font.draw(fit(Font, line1, EDGE_X - FOOT_X), FOOT_X, 15 * 8)
-    end
-    if line2 then
-      Font.draw(fit(Font, line2, EDGE_X - FOOT_X), FOOT_X, 16 * 8)
-    end
-  end
 
   -- ManagerState's own wrap, which is file-local there.  Word wrap at a
   -- column budget, one list of lines per paragraph.
@@ -493,12 +504,26 @@ local function newRenderer(mod, Rows, opt, Builtin)
 
   function R.draw(state)
     toolkit()
-    if state.screen == "options" then
+
+    -- The two card screens paint the way the game's own OPTION screen does:
+    -- white paper, no outer frame, and the cards themselves are the chrome.
+    -- Everything else is prose or a short action list, and keeps the single
+    -- bordered window that suits it.
+    -- The ERRORS tab is prose in a framed window like the detail screens,
+    -- not cards; everything else on the list is a card.
+    local carded = state.screen == "options"
+      or (state.screen == "list" and state.tab ~= 3)
+    if carded then
       love.graphics.setColor(1, 1, 1, 1)
       love.graphics.rectangle("fill", 0, 0, 160, 144)
-      Font.drawBox(0, 0, COLS, 18)
       love.graphics.setColor(0, 0, 0, 1)
-      R.drawOptions(state)
+      if state.screen == "list" then R.drawList(state) else R.drawOptions(state) end
+      -- the notice takes the caption line, which is the only line either
+      -- card screen has spare
+      if state.notice then
+        Font.draw(fit(Font, state.notice, EDGE_X - LABEL_X), LABEL_X,
+                  CAPTION_ROW * 8)
+      end
       love.graphics.setColor(1, 1, 1, 1)
       -- the confirm/notice modal stays the engine's: it is a centred box with
       -- its own cursor index, and nothing about it is unreadable
@@ -513,14 +538,13 @@ local function newRenderer(mod, Rows, opt, Builtin)
     love.graphics.setColor(0, 0, 0, 1)
 
     if state.screen == "list" then
-      R.drawList(state)
+      R.drawList(state)          -- the ERRORS tab; the rest went the card way
     elseif state.screen == "detail" then
       R.drawDetail(state)
     elseif state.screen == "permissions" then
-      R.drawSimple(state, S.line.permissions,
-        S.footer.permissions[1], S.footer.permissions[2])
+      R.drawSimple(state, S.line.permissions)
     elseif state.screen == "errors" then
-      R.drawSimple(state, S.line.errors, S.footer.errors[1], S.footer.errors[2])
+      R.drawSimple(state, S.line.errors)
     elseif state.screen == "apply" then
       R.drawApply(state)
     end

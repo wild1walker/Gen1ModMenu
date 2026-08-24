@@ -22,7 +22,6 @@ local memory = {}
 
 local function decorate(mod, Rows, Skin, opt, state, Builtin)
   local R = Skin.newRenderer(mod, Rows, opt, Builtin)
-  local LIST_ROWS = Skin.LIST_ROWS
   local broken = false
   local warned = {}
   local optionsCache = nil
@@ -82,12 +81,47 @@ local function decorate(mod, Rows, Skin, opt, state, Builtin)
         sort = opt("sort"),
         hide_disabled = opt("hide_disabled"),
         only_options = opt("only_options"),
+        -- no heading rows: a card layout has four rows on screen and a
+        -- heading would spend one of them, so the category rides on the
+        -- card's own second line instead
+        flat = true,
       }, mod.id)
     end)
     if ok and type(rows) == "table" and #rows > 0 then return rows end
     warnOnce("modRows", "the mod list could not be arranged (%s) -- "
       .. "keeping the engine's order", tostring(rows))
     return Builtin.modRows(self)
+  end
+
+  -- ManagerState:moveCursor clamps the list's scroll to an ELEVEN-row window
+  -- (its own LIST_ROWS), which is what the previous layout drew.  The cards
+  -- show four, so the list owns its clamp the same way the options page does.
+  -- One-based here; the options page counts from zero.
+  local function clampListScroll(cursor, scroll, total, visible)
+    scroll = math.max(1, scroll or 1)
+    if cursor < scroll then return cursor end
+    if cursor > scroll + visible - 1 then return cursor - visible + 1 end
+    local tail = math.max(1, total - visible + 1)
+    if scroll > tail then return tail end
+    return scroll
+  end
+
+  state.moveCursor = function(self, dir)
+    local result = Builtin.moveCursor(self, dir)
+    if modern() and self.screen == "list" then
+      self.scroll = clampListScroll(self.cursor, self.scroll,
+                                    #self:rowsForScreen(), Skin.CARDS)
+    end
+    return result
+  end
+
+  state.goTo = function(self, screen)
+    local result = Builtin.goTo(self, screen)
+    if modern() and self.screen == "list" then
+      self.scroll = clampListScroll(self.cursor, self.scroll,
+                                    #self:rowsForScreen(), Skin.CARDS)
+    end
+    return result
   end
 
   state.refresh = function(self)
@@ -201,11 +235,8 @@ local function decorate(mod, Rows, Skin, opt, state, Builtin)
     self.scroll = memory.scroll or 1
     -- the remembered row may be gone, or may now be a group heading
     self:snapCursor()
-    if self.cursor < self.scroll then self.scroll = self.cursor end
-    if self.cursor > self.scroll + LIST_ROWS - 1 then
-      self.scroll = self.cursor - LIST_ROWS + 1
-    end
-    if self.scroll < 1 then self.scroll = 1 end
+    self.scroll = clampListScroll(self.cursor, self.scroll,
+                                  #self:rowsForScreen(), Skin.CARDS)
   end
 
   state.update = function(self)

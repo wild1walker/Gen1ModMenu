@@ -4,6 +4,51 @@ All notable changes to Gen1ModMenu are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this mod uses
 [semantic versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-08-24
+
+Redrawn again, this time in the game's own OPTION-screen idiom rather than in
+one invented for the mod.
+
+0.1.x fitted eleven rows on a screen by giving each one a single line to share
+between a name and a value. It survived every guard and still read as a dense,
+clipped table -- `Gen1AutoContin`, `PRESENTATI` -- because eighteen columns
+minus a status word is not enough for either half.
+
+### Changed
+
+- **The mod list and the per-mod options page are drawn as framed cards**,
+  using the same geometry `src/ui/OptionRows.lua` uses for `TEXT SPEED` and
+  `BATTLE ANIMATION`: four full-width 20x4 boxes down the screen, the label on
+  the first line inside each and its value indented on the second, the cursor
+  in the margin beside the label. A card holds two whole lines, of 17 and 16
+  glyphs, so nothing on either screen is cut short any more.
+- **The mod list shows four mods at a time instead of eleven.** That is the
+  price of the layout, and it is why the position counter, the sorts and the
+  filters are all still there.
+- **A card's second line carries the category on the left and the status on
+  the right**, so category headings are gone -- a heading would have cost one
+  of the four cards, and the sort still groups the list whether or not it says
+  so out loud.
+- **The `CHANGED` marker is a word again**, not a `.`; it is right-aligned on
+  the value line, where a card has room for it.
+- **The `ERRORS` tab stays plain lines in a framed window.** It is wrapped
+  prose and a mark legend, and a card per line of a wrapped sentence would be
+  absurd.
+
+### Removed
+
+- **Every control hint.** `A:OPEN SEL:TOGGLE`, `START:APPLY B:EXIT`,
+  `L/R:CHANGE B:DONE` and the rest are gone. Each screen is A to choose, B to
+  go back and the d-pad to move, the same as every other menu in the game, and
+  two of the sixteen lines spent restating that were two the cards wanted more.
+
+### Fixed
+
+- **A notice and the caption shared a line.** The tabs and a message like
+  `SAFE MODE ACTIVE` both wanted the bottom row; the tabs now stand down while
+  a notice is up, rather than being painted over and only looking right by
+  accident. Caught by the overlap guard added in 0.1.1.
+
 ## [0.1.1] - 2026-08-24
 
 Layout fixes, from seeing 0.1.0 on a real screen. Three things were drawn on
@@ -112,5 +157,6 @@ all four of these did.
   of the visit. On top of both, the engine's own `Screens.build` falls back
   to its builtin manager if this mod's screen cannot be constructed.
 
+[0.2.0]: https://github.com/wild1walker/Gen1ModMenu/releases/tag/v0.2.0
 [0.1.1]: https://github.com/wild1walker/Gen1ModMenu/releases/tag/v0.1.1
 [0.1.0]: https://github.com/wild1walker/Gen1ModMenu/releases/tag/v0.1.0
