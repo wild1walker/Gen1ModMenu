@@ -38,12 +38,55 @@ local COLS = 20
 local CURSOR_X = 8         -- tile column 1
 local LABEL_X = 16         -- tile column 2
 local EDGE_X = 152         -- one past the last interior column
+-- Footers carry no cursor, so they start one column left of everything else.
+-- That column is not decoration: "START:APPLY B:EXIT" is 18 glyphs and the
+-- interior is 18 columns, so drawn at LABEL_X it loses its last letter --
+-- which is exactly what vanilla does, except vanilla draws over the border
+-- instead of truncating.
+local FOOT_X = 8
+
+-- What a whole-width string on each kind of row has to fit inside.
+Skin.LINE_BUDGET = EDGE_X - LABEL_X
+Skin.FOOTER_BUDGET = EDGE_X - FOOT_X
 local RULE_FROM, RULE_TO = 1, 18
 
 -- LIST_ROWS must stay 11: ManagerState:moveCursor clamps self.scroll to a
 -- window of exactly that many rows, and adjustOrTab pages by it.  Drawing a
 -- different number would let the cursor walk out of sight.
 local LIST_TOP, LIST_ROWS = 4, 11
+
+-- Every fixed word this screen says, in one place.
+--
+-- `line` is drawn at LABEL_X, which leaves column 1 for the cursor; `footer`
+-- is drawn at FOOT_X, which has no cursor and so gets one glyph more.  The
+-- suite measures each of these against the budget of the row it belongs to,
+-- because a string that overruns does not look like a bug -- it looks like a
+-- word with its last letter missing, which is how "START:APPLY B:EXIT"
+-- shipped as "START:APPLY B:EXI".
+Skin.STRINGS = {
+  line = {
+    tabs = { "[MODS] PROF ERRS", "MODS [PROF] ERRS", "MODS PROF [ERRS]" },
+    manager = "MOD MANAGER",
+    permissions = "PERMISSIONS",
+    errors = "ERRORS",
+    pending = "PENDING CHANGES",
+    noChanges = "NO CHANGES",
+    options = "OPTIONS",
+    more = " MORE",
+    changed = ".CHANGED",
+  },
+  footer = {
+    mods = { "A:OPEN SEL:TOGGLE", "START:APPLY B:EXIT" },
+    profiles = { "A:APPLY SEL:RENAME", "START:DELETE" },
+    errorsTab = { "UP/DOWN:SCROLL" },
+    permissions = { "DECLARED BY AUTHOR", "NOT ENFORCED" },
+    errors = { "UP/DOWN:SCROLL", "B:BACK" },
+    optionsPage = { nil, "L/R:CHANGE B:DONE" },
+  },
+}
+
+local S = Skin.STRINGS
+local TABS = S.line.tabs
 
 Skin.LIST_ROWS = LIST_ROWS
 
@@ -71,6 +114,24 @@ local function fit(Font, text, budget)
   -- cut on a glyph boundary: POKeDEX is seven glyphs across eight bytes, so
   -- a plain sub() can slice a character in half
   return text:sub(1, spans[shown].to)
+end
+
+-- A choice row's help line is every choice label joined with " / ", which for
+-- a four-way row is well past what a 17-glyph line holds.  Cutting it by width
+-- leaves a dangling separator -- "CATEGORY / NAME /" -- so whole items come
+-- off the end instead and the line always finishes on a real value.
+local function trimList(Font, text, budget)
+  text = tostring(text or "")
+  if Font.width(text) <= budget then return text end
+  if not text:find(" / ", 1, true) then return fit(Font, text, budget) end
+  local parts = {}
+  for part in (text .. " / "):gmatch("(.-) / ") do parts[#parts + 1] = part end
+  while #parts > 1 do
+    parts[#parts] = nil
+    local joined = table.concat(parts, " / ")
+    if Font.width(joined) <= budget then return joined end
+  end
+  return fit(Font, parts[1] or text, budget)
 end
 
 local function rightAt(Font, text, edge, y)
@@ -144,10 +205,11 @@ local function newRenderer(mod, Rows, opt, Builtin)
 
   function R.drawList(state)
     local rows = state:rowsForScreen()
-    local TABS = { "[MODS] PROF ERRS", "MODS [PROF] ERRS", "MODS PROF [ERRS]" }
-    Font.draw(TABS[state.tab] or TABS[1], LABEL_X, 2 * 8)
 
-    -- position, so a long list says where in itself you are
+    -- Position goes on the TITLE line, not the tab line: the tab line is
+    -- already 16 glyphs of a 17-glyph run, so a counter beside it lands on
+    -- top of ERRS.  It also replaces the more-arrow the list used to draw,
+    -- which shared its row with the first footer line.
     local total, ordinal = 0, 0
     for i, row in ipairs(rows) do
       if not row.header then
@@ -155,10 +217,12 @@ local function newRenderer(mod, Rows, opt, Builtin)
         if i == state.cursor then ordinal = total end
       end
     end
-    if total > 0 then
-      rightAt(Font, ordinal .. "/" .. total, EDGE_X, 2 * 8)
-    end
+    -- snapCursor keeps the cursor off headings, so ordinal 0 does not happen
+    -- in the game; clamped anyway rather than ever reading "0/12".
+    pair(Font, state.banner or S.line.manager,
+         total > 0 and (math.max(ordinal, 1) .. "/" .. total) or nil, 1)
 
+    Font.draw(TABS[state.tab] or TABS[1], LABEL_X, 2 * 8)
     rule(Font, 3)
 
     local last = math.min(#rows, (state.scroll or 1) + LIST_ROWS - 1)
@@ -168,21 +232,24 @@ local function newRenderer(mod, Rows, opt, Builtin)
       if row.header then
         drawHeader(row.label, y)
       else
-        pair(Font, row.label, row.state, y)
+        -- A healthy enabled mod gets no mark at all.  A column reading ON
+        -- eleven times over is not information, and blanking it hands three
+        -- more glyphs to every label on the screen -- which is the
+        -- difference between Gen1AutoContinue and "Gen1AutoConti".  The
+        -- exceptions are what the column is for, and they now stand out.
+        -- Same rule the engine's own glyphFor uses: healthy answers " ".
+        pair(Font, row.label, row.state ~= "ON" and row.state or nil, y)
         drawCursor(state, i, y)
       end
       y = y + 1
     end
-    if #rows > last then
-      Font.drawCode(Theme.moreArrow, 18 * 8, (LIST_TOP + LIST_ROWS) * 8)
-    end
 
     if state.tab == 1 then
-      R.footer(state, "A:OPEN SEL:TOGGLE", "START:APPLY B:EXIT")
+      R.footer(state, S.footer.mods[1], S.footer.mods[2])
     elseif state.tab == 2 then
-      R.footer(state, "A:APPLY SEL:RENAME", "START:DELETE")
+      R.footer(state, S.footer.profiles[1], S.footer.profiles[2])
     else
-      R.footer(state, "UP/DOWN:SCROLL")
+      R.footer(state, S.footer.errorsTab[1])
     end
   end
 
@@ -269,7 +336,7 @@ local function newRenderer(mod, Rows, opt, Builtin)
   -- ------- apply
 
   function R.drawApply(state)
-    Font.draw("PENDING CHANGES", LABEL_X, 1 * 8)
+    Font.draw(S.line.pending, LABEL_X, 1 * 8)
     rule(Font, 2)
     local staged = state:stagedList()
     local rows = state:rowsForScreen()
@@ -277,18 +344,23 @@ local function newRenderer(mod, Rows, opt, Builtin)
 
     local y = 3
     if #staged == 0 then
-      Font.draw("NO CHANGES", LABEL_X, y * 8)
+      Font.draw(S.line.noChanges, LABEL_X, y * 8)
     end
-    for i = 1, math.min(#staged, actionTop - 4) do
+    -- One row is held back for the overflow line, so "N MORE" gets a line of
+    -- its own rather than landing on the last staged mod's own ON/OFF.
+    local slots = actionTop - 4
+    local hidden = #staged - slots
+    if hidden > 0 then slots = slots - 1 end
+    for i = 1, math.min(#staged, slots) do
       local m = staged[i]
       pair(Font, m.name or m.id, m.enabled and "ON" or "OFF", y)
       y = y + 1
     end
-    local hidden = #staged - (actionTop - 4)
+    hidden = #staged - slots
     if hidden > 0 then
       -- "N MORE", not "+N": the Game Boy charmap has no + glyph (nor * ~ < >
       -- & =), and a character it does not carry is drawn as a space
-      rightAt(Font, hidden .. " MORE", EDGE_X, (y - 1) * 8)
+      Font.draw(hidden .. S.line.more, LABEL_X, y * 8)
     end
 
     rule(Font, actionTop - 1)
@@ -321,11 +393,17 @@ local function newRenderer(mod, Rows, opt, Builtin)
     local rows = state.optionRows or {}
     local window = R.optionWindow()
 
-    pair(Font, (m and (m.name or m.id)) or "OPTIONS",
-         m and m.version and ("v" .. m.version) or nil, 1)
-    rule(Font, 2)
-
     local scroll = state.scroll or 0
+
+    -- The version is the nicer thing to show, but only while the whole list
+    -- is on screen.  Once it scrolls, where-you-are beats what-version, and
+    -- it goes here rather than as an arrow -- the arrow's row is the rule.
+    local corner = m and m.version and ("v" .. m.version) or nil
+    if #rows > window then
+      corner = math.min(state.cursor or 1, #rows) .. "/" .. #rows
+    end
+    pair(Font, (m and (m.name or m.id)) or S.line.options, corner, 1)
+    rule(Font, 2)
     for slot = 1, window do
       local i = scroll + slot
       local row = rows[i]
@@ -348,37 +426,35 @@ local function newRenderer(mod, Rows, opt, Builtin)
       Font.draw(fit(Font, row.label, valueX - LABEL_X - 8), LABEL_X, y * 8)
       drawCursor(state, i, y)
     end
-    if #rows > scroll + window then
-      Font.drawCode(Theme.moreArrow, 18 * 8, (OPT_TOP + window) * 8)
-    end
-
     if opt("help_line") then
       rule(Font, 14)
       local row = rows[state.cursor]
-      local help = row and row.help
-      if row and row.changed then
-        help = (help and (help .. " ") or "") .. ".CHANGED"
-      end
-      if help then Font.draw(fit(Font, help, EDGE_X - LABEL_X), LABEL_X, 15 * 8) end
-      R.footer(state, nil, "A/LEFT-RIGHT B:DONE")
+      local mark = (row and row.changed) and S.line.changed or nil
+      local budget = EDGE_X - LABEL_X
+      -- the changed marker is the part that must survive, so it is taken out
+      -- of the budget before the vocabulary is trimmed to fit
+      if mark then budget = budget - Font.width(" " .. mark) end
+      local help = row and row.help and trimList(Font, row.help, budget) or nil
+      if mark then help = (help and (help .. " ") or "") .. mark end
+      if help then Font.draw(help, LABEL_X, 15 * 8) end
     else
       rule(Font, 15)
-      R.footer(state, nil, "A/LEFT-RIGHT B:DONE")
     end
+    R.footer(state, S.footer.optionsPage[1], S.footer.optionsPage[2])
   end
 
   -- ------- shared
 
   function R.footer(state, line1, line2)
     if state.notice then
-      Font.draw(fit(Font, state.notice, EDGE_X - LABEL_X), LABEL_X, 16 * 8)
+      Font.draw(fit(Font, state.notice, EDGE_X - FOOT_X), FOOT_X, 16 * 8)
       return
     end
     if line1 then
-      Font.draw(fit(Font, line1, EDGE_X - LABEL_X), LABEL_X, 15 * 8)
+      Font.draw(fit(Font, line1, EDGE_X - FOOT_X), FOOT_X, 15 * 8)
     end
     if line2 then
-      Font.draw(fit(Font, line2, EDGE_X - LABEL_X), LABEL_X, 16 * 8)
+      Font.draw(fit(Font, line2, EDGE_X - FOOT_X), FOOT_X, 16 * 8)
     end
   end
 
@@ -437,14 +513,14 @@ local function newRenderer(mod, Rows, opt, Builtin)
     love.graphics.setColor(0, 0, 0, 1)
 
     if state.screen == "list" then
-      Font.draw(state.banner or "MOD MANAGER", LABEL_X, 1 * 8)
       R.drawList(state)
     elseif state.screen == "detail" then
       R.drawDetail(state)
     elseif state.screen == "permissions" then
-      R.drawSimple(state, "PERMISSIONS", "DECLARED BY AUTHOR,", "NOT ENFORCED")
+      R.drawSimple(state, S.line.permissions,
+        S.footer.permissions[1], S.footer.permissions[2])
     elseif state.screen == "errors" then
-      R.drawSimple(state, "ERRORS", "UP/DOWN:SCROLL B:BACK")
+      R.drawSimple(state, S.line.errors, S.footer.errors[1], S.footer.errors[2])
     elseif state.screen == "apply" then
       R.drawApply(state)
     end

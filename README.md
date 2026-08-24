@@ -63,9 +63,13 @@ row *accepts* rather than inventing prose the author never wrote.
 
 ## The mod list
 
+A mod that is enabled and running carries **no mark at all** — a column
+reading `ON` eleven times over is not information, and leaving it blank hands
+three more glyphs to every name on the screen. The marks are the exceptions:
+
 | Column | Reads |
 | --- | --- |
-| `ON` | enabled and running |
+| *(blank)* | enabled and running |
 | `OFF` | disabled |
 | `STGD` | changed, waiting on a restart |
 | `ERR` | failed to load |
@@ -80,14 +84,14 @@ own detail screen.
 
 All under **MODS → Gen1ModMenu → OPTIONS**.
 
-- **PRESENTATION** — `MODERN` or `VANILLA`. `VANILLA` hands every screen
+- **STYLE** — `MODERN` or `VANILLA`. `VANILLA` hands every screen
   straight back to the engine's own renderer, and it is read on every frame,
   so the row takes effect without leaving the screen.
 - **SORT BY** — `CATEGORY` (what the engine does, plus a stable order inside
   each group), `NAME`, `ENABLED`, or `PROBLEMS` — which floats errored and
   blocked mods to the top.
 - **HIDE OFF** — drop disabled mods from the list.
-- **ONLY W/OPTIONS** — show only the mods that have something to configure.
+- **WITH OPTIONS** — show only the mods that have something to configure.
 - **HELP LINE** — the line under the options list. Off gives its row back to
   the list, making it twelve.
 - **RESET ROW** — show `RESET DEFAULTS` on each mod's options page.
@@ -115,7 +119,7 @@ means requiring it by name, which is the whole reason the manifest declares
 This is the one screen a player uses to switch off a mod that is
 misbehaving, so there are three independent ways back to the vanilla one:
 
-1. **`PRESENTATION: VANILLA`**, read on every call.
+1. **`STYLE: VANILLA`**, read on every call.
 2. **A renderer that throws** is logged once and demoted to the engine's own
    draw for the rest of the visit.
 3. **`Screens.build` already pcalls a mod screen's `new`** and falls back to

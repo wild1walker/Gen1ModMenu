@@ -15,6 +15,9 @@ return {
         .. "line with its value, rather than four bordered boxes",
       "the mod list can be sorted by name, enabled state or problems, and "
         .. "filtered down to the mods that have options",
+      "a mod that is enabled and running carries no mark; the right-hand "
+        .. "column is for the exceptions (OFF, STGD, ERR, BLKD, SKIP), which "
+        .. "is what gives every name room to be read in full",
       "Gold draws the OPTIONS page from this mod rather than through "
         .. "src/ui/OptionRows.lua, which the engine itself marks Gen 1 only",
     },

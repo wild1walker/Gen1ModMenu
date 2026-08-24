@@ -23,7 +23,7 @@ Options.schema = {
   -- something the player cannot read is still a skin they have to navigate
   -- to switch off, so VANILLA is one row away and hands every screen back to
   -- the engine's own renderer untouched.
-  { key = "presentation", type = "choice", label = "PRESENTATION",
+  { key = "presentation", type = "choice", label = "STYLE",
     default = "modern",
     choices = {
       { "MODERN", "modern" },
@@ -45,7 +45,7 @@ Options.schema = {
     default = false,
     visible_if = { key = "presentation", equals = "modern" } },
 
-  { key = "only_options", type = "toggle", label = "ONLY W/OPTIONS",
+  { key = "only_options", type = "toggle", label = "WITH OPTIONS",
     default = false,
     visible_if = { key = "presentation", equals = "modern" } },
 

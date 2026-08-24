@@ -354,7 +354,8 @@ do -- the ERRORS tab explains the marks when it has nothing else to say
   local rows = state:errorRows(nil)
   T.eq(rows[1].header, true, "the legend opens with a heading")
   T.eq(#rows, 1 + #Rows.LEGEND, "and lists every mark")
-  T.eq(rows[2].state, "ON", "each entry carries its mark")
+  T.eq(rows[2].state, "", "the first entry explains the absence of a mark")
+  T.eq(rows[3].state, "OFF", "and the rest carry the mark they describe")
 
   T.eq(#state:errorRows({ id = "one" }), 1,
     "a per-mod errors screen is left exactly as the engine built it")
@@ -442,6 +443,83 @@ local function recordingFont()
   return proxy, marks
 end
 
+-- Every fixed string the screen says has to fit the row it is drawn on.
+-- Overlap does not catch this: an overlong footer is silently cut to width by
+-- fit(), so it stays inside the box, overlaps nothing, and simply loses its
+-- last letter. That is how "START:APPLY B:EXIT" shipped as "...B:EXI".
+
+do
+  local function fits(text, budget, where)
+    T.check(RealFont.width(text) <= budget,
+      where .. ' fits its row: "' .. text .. '" is '
+      .. RealFont.width(text) .. "px of " .. budget)
+  end
+  local checked = 0
+  for key, value in pairs(Skin.STRINGS.line) do
+    if type(value) == "string" then
+      fits(value, Skin.LINE_BUDGET, "line." .. key)
+      checked = checked + 1
+    else
+      for i, one in ipairs(value) do
+        fits(one, Skin.LINE_BUDGET, "line." .. key .. "[" .. i .. "]")
+        checked = checked + 1
+      end
+    end
+  end
+  for key, group in pairs(Skin.STRINGS.footer) do
+    for i = 1, 2 do
+      if group[i] then
+        fits(group[i], Skin.FOOTER_BUDGET, "footer." .. key .. "[" .. i .. "]")
+        checked = checked + 1
+      end
+    end
+  end
+  T.check(checked >= 18, "the whole chrome vocabulary was measured")
+end
+
+-- A label and its own widest value share one 17-glyph row, with a glyph of
+-- gap between them. When they do not fit, pair() shortens the LABEL -- so the
+-- row still looks tidy and simply says the wrong thing ("ONLY W/OPTION",
+-- "PRESENTATI"). Nothing above catches that, so the pairs are measured here.
+
+do
+  local GAP = 8
+  local function pairFits(label, value, where)
+    local need = RealFont.width(label) + GAP + RealFont.width(value or "")
+    T.check(need <= Skin.LINE_BUDGET,
+      where .. ' fits beside its value: "' .. label .. '" + "'
+      .. tostring(value) .. '" is ' .. need .. "px of " .. Skin.LINE_BUDGET)
+  end
+
+  for _, row in ipairs(Options.schema) do
+    local widest = ""
+    if row.type == "toggle" then
+      widest = "OFF"
+    elseif row.type == "choice" then
+      for _, choice in ipairs(row.choices) do
+        if #tostring(choice[1]) > #widest then widest = tostring(choice[1]) end
+      end
+    elseif row.type == "number" then
+      widest = tostring(row.max or row.default)
+    end
+    pairFits(row.label, widest, "option " .. row.key)
+  end
+
+  -- the reset row this mod adds to every OTHER mod's page, which has no value
+  pairFits("RESET DEFAULTS", nil, "the reset row")
+
+  -- the ERRORS-tab legend, drawn as label-plus-mark by the same pair()
+  for _, entry in ipairs(Rows.LEGEND) do
+    pairFits(entry[2], entry[1], "legend " .. (entry[1] == "" and "blank" or entry[1]))
+  end
+
+  -- A mod NAME is data, not chrome: it can be any length, and a long one
+  -- beside a four-glyph mark genuinely does not fit. What must hold is which
+  -- half gives way -- pair() shortens the label and keeps the value, so the
+  -- mark survives intact and it is the name that gets clipped. That is
+  -- asserted against the real renderer below, not here.
+end
+
 -- a mod with every detail row the engine can produce, and a description far
 -- longer than any window for it
 local FAT = {
@@ -521,6 +599,25 @@ local function renderCase(name, screen, setup, overrides)
   end
   T.check(bad == nil, name .. ": every character is in the charmap"
     .. (bad and (" (" .. bad .. " in " .. tostring(badText) .. ")") or ""))
+
+  -- Nothing may be drawn on top of anything else.  Staying inside the box is
+  -- not enough on its own: the first build passed the bounds check while
+  -- painting the position counter through "ERRS", the scroll arrow through
+  -- "SEL:TOGGLE", and "N MORE" through a staged mod's own ON.  Two draws on
+  -- the same text row whose pixel spans meet is the whole test.
+  local clash
+  for i = 1, #marks do
+    for j = i + 1, #marks do
+      local a, b = marks[i], marks[j]
+      if a.y == b.y and a.w > 0 and b.w > 0
+          and a.x < b.x + b.w and b.x < a.x + a.w then
+        clash = clash or (a.what .. " over " .. b.what .. " at row "
+          .. (a.y / 8))
+      end
+    end
+  end
+  T.check(clash == nil, name .. ": nothing overlaps"
+    .. (clash and (" (" .. clash .. ")") or ""))
   return marks
 end
 
@@ -536,6 +633,20 @@ renderCase("list of one long name", "list", function(s)
 end)
 
 renderCase("empty list", "list", function(s) s.status.available = {} end)
+
+do -- a name too long to sit beside its mark clips the NAME, never the mark
+  local marks = renderCase("long name with a mark", "list", function(s)
+    s.status.available = { { id = "x", name = "AnAbsurdlyLongModName",
+                             category = "UI", enabled = false } }
+  end, { sort = "name" })
+  local sawMark, sawWholeName = false, false
+  for _, m in ipairs(marks) do
+    if m.what == "OFF" then sawMark = true end
+    if m.what == "AnAbsurdlyLongModName" then sawWholeName = true end
+  end
+  T.check(sawMark, "the mark is drawn in full beside a name that cannot fit")
+  T.check(not sawWholeName, "and it is the name that gives way, not the mark")
+end
 
 renderCase("detail", "detail", function(s) s.currentMod = FAT end)
 renderCase("detail scrolled", "detail", function(s)

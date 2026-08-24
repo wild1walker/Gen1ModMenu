@@ -14,11 +14,15 @@ local Rows = {}
 -- spelled out in the legend on the ERRORS tab.
 Rows.STATES = { "ON", "OFF", "STGD", "ERR", "BLKD", "SKIP" }
 
+-- The mark, and what it means.  A healthy enabled mod is drawn with no mark
+-- at all -- a column reading ON down the whole screen is not information, and
+-- blanking it gives every label three more glyphs -- so the first entry
+-- explains the absence rather than showing a mark that is never drawn.
 Rows.LEGEND = {
-  { "ON", "RUNNING" },
+  { "", "NO MARK: RUNNING" },
   { "OFF", "DISABLED" },
-  { "STGD", "NEEDS RESTART" },
-  { "ERR", "FAILED TO LOAD" },
+  { "STGD", "RESTART" },
+  { "ERR", "LOAD FAILED" },
   { "BLKD", "DEPENDENCY" },
   { "SKIP", "OTHER GAME" },
 }
