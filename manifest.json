@@ -1,7 +1,7 @@
 {
   "id": "gen1_mod_menu",
   "name": "Gen1ModMenu",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "api": 2,
   "entry": "main.lua",
   "profile": "content",
@@ -21,5 +21,5 @@
   ],
   "experimental": false,
   "github": "wild1walker/Gen1ModMenu",
-  "description": "Redraws the mod manager in the game's own OPTION-screen idiom: framed cards, the name on its own line and its value indented below, with sorting and filters on the mod list and a RESET DEFAULTS row on every mod's options page."
+  "description": "Redraws the mod manager in the game's own OPTION-screen idiom: framed cards, the name on its own line and its value indented below, with sorting and filters on the mod list and a help line on every mod's options page."
 }

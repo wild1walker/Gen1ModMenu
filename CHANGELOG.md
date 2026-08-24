@@ -4,6 +4,35 @@ All notable changes to Gen1ModMenu are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this mod uses
 [semantic versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] - 2026-08-24
+
+### Fixed
+
+- **Two `RESET DEFAULTS` rows on every mod's options page.** The engine
+  already appends one — `src/mods/ManagerState.lua`'s `buildOptionRows` ends
+  by adding a row keyed `__reset` that writes every schema default back and
+  notifies `DEFAULTS RESTORED`. This mod had been appending a second row that
+  did the same thing, in 0.1.0 through 0.3.0, because it was written without
+  reading that function to its end.
+
+  The mod's copy is gone. The engine's row stays, and the only thing added to
+  it now is the help line the other rows get.
+
+- The `RESET ROW` option went with it. It switched off a row this mod no
+  longer owns, and the engine's is not optional. Any stored value for it is
+  ignored; there is nothing to migrate.
+
+### Added
+
+- **A guard for the class of mistake that caused it**: no two rows on an
+  options page may read the same. Nothing in the suite had noticed two
+  identical rows, because the two carried different ids, both sat inside the
+  box, neither overlapped anything and both spelled only charmap characters.
+  What told them apart on screen was that they said the same words, so that
+  is what is asserted now. The stand-in for `ManagerState` in the suite also
+  appends the engine's reset row, which is what made the duplicate visible to
+  a test at all.
+
 ## [0.3.0] - 2026-08-24
 
 Two edits outside the manager, both switched off by `STYLE: VANILLA` along
@@ -71,6 +100,8 @@ minus a status word is not enough for either half.
   so out loud.
 - **The `CHANGED` marker is a word again**, not a `.`; it is right-aligned on
   the value line, where a card has room for it.
+- **`RESET DEFAULTS` is a card like any other** — it is the engine's row, and
+  0.3.1 stops this mod appending a duplicate of it.
 - **The `ERRORS` tab stays plain lines in a framed window.** It is wrapped
   prose and a mark legend, and a card per line of a wrapped sentence would be
   absurd.
@@ -161,9 +192,9 @@ all four of these did.
   or `PROBLEMS`. `HIDE OFF` drops disabled mods and `ONLY W/OPTIONS` drops
   the ones with nothing to configure. Neither filter can hide Gen1ModMenu
   itself, because its own options page is where they are set.
-- **`RESET DEFAULTS`** on every mod's options page, restoring each row to the
-  value its author shipped. A `.` beside a value marks a row that differs
-  from that default.
+- A `.` beside a value marks a row that differs from the default its author
+  shipped. (This entry also claimed a `RESET DEFAULTS` row; that row is the
+  engine's own and this mod was duplicating it — see 0.3.1.)
 - **A mark legend** on the `ERRORS` tab whenever there is nothing wrong,
   spelling out `ON`, `OFF`, `STGD`, `ERR`, `BLKD` and `SKIP`.
 - **`KEEP CURSOR`**, which reopens the manager on the row it was left on.
@@ -197,6 +228,7 @@ all four of these did.
   of the visit. On top of both, the engine's own `Screens.build` falls back
   to its builtin manager if this mod's screen cannot be constructed.
 
+[0.3.1]: https://github.com/wild1walker/Gen1ModMenu/releases/tag/v0.3.1
 [0.3.0]: https://github.com/wild1walker/Gen1ModMenu/releases/tag/v0.3.0
 [0.2.0]: https://github.com/wild1walker/Gen1ModMenu/releases/tag/v0.2.0
 [0.1.1]: https://github.com/wild1walker/Gen1ModMenu/releases/tag/v0.1.1

@@ -139,6 +139,12 @@ local function decorate(mod, Rows, Skin, opt, state, Builtin)
       end
     end
     for _, row in ipairs(rows) do
+      -- The engine appends this one itself, at the end of its own
+      -- buildOptionRows -- keyed "__reset" rather than by its label, which
+      -- Strings localizes.  It only wants the help line the other rows get.
+      if row.id == "__reset" then
+        row.help = "PUT BACK THE AUTHOR'S VALUES"
+      end
       local source = byKey[row.id]
       if source then
         row.help = Rows.helpFor(source)
@@ -149,29 +155,6 @@ local function decorate(mod, Rows, Skin, opt, state, Builtin)
       end
     end
 
-    if opt("reset_row") and #rows > 0 then
-      rows[#rows + 1] = {
-        id = "gen1_mod_menu:reset",
-        label = "RESET DEFAULTS",
-        help = "PUT BACK THE AUTHOR'S VALUES",
-        activate = function()
-          for _, source in ipairs(schema) do
-            if type(source) == "table" and type(source.key) == "string"
-                and source.default ~= nil then
-              -- setOption is the engine's only writer: it stages the value,
-              -- persists it and emits mod.options_changed, so a mod watching
-              -- its own rows hears a reset the same as a hand edit
-              self:setOption(m.id, source.key, source.default)
-            end
-          end
-          -- visible_if rows can appear or vanish with the values that drive
-          -- them, so the list is rebuilt rather than repainted
-          self.optionRows = self:buildOptionRows(m, schema)
-          self.cursor = math.max(1, math.min(self.cursor, #self.optionRows))
-          self:notify("DEFAULTS RESTORED")
-        end,
-      }
-    end
     return rows
   end
 

@@ -225,6 +225,12 @@ local function fakeManager(overrides)
       rows[#rows + 1] = { id = row.key, label = row.label,
                           value = function() return "V" end }
     end
+    -- the engine appends this one itself, at the end of its own
+    -- buildOptionRows; leaving it out of the stand-in is what let a second
+    -- copy of it ship
+    rows[#rows + 1] = { id = "__reset", label = "RESET DEFAULTS",
+                        value = function() return "" end,
+                        activate = function() end }
     return rows
   end
   function Builtin.updateOptions() end
@@ -310,7 +316,7 @@ do -- a renderer that throws is demoted for good rather than throwing again
   T.eq(calls.draw, 3, "and every later frame goes straight there")
 end
 
-do -- the reset row is appended, and restores every default it is given
+do -- the author's rows are annotated, and nothing is added beside them
   local schema = {
     { key = "a", type = "toggle", label = "A", default = true },
     { key = "b", type = "number", label = "B", default = 3, min = 1, max = 8 },
@@ -319,23 +325,31 @@ do -- the reset row is appended, and restores every default it is given
   state.written.a = false
   state.written.b = 7
   local rows = state:buildOptionRows({ id = "target" }, schema)
-  T.eq(#rows, 3, "the reset row is appended to the author's rows")
-  T.eq(rows[3].label, "RESET DEFAULTS", "and it is last")
   T.eq(rows[1].changed, true, "a row holding a non-default value is marked")
   T.eq(rows[1].help, "ON / OFF", "and carries its help line")
   T.eq(rows[2].help, "1-8", "including the numeric range")
-
-  rows[3].activate()
-  T.eq(state.written.a, true, "resetting restores the first default")
-  T.eq(state.written.b, 3, "and the second")
-  T.eq(state.notices[1], "DEFAULTS RESTORED", "and says so")
+  T.eq(rows[#rows].id, "__reset", "the engine's reset row is still last")
+  T.eq(rows[#rows].help, "PUT BACK THE AUTHOR'S VALUES",
+    "and it gets a help line like the rest")
 end
 
-do -- RESET ROW off leaves the author's rows exactly as the engine built them
-  local state = decorated({ reset_row = false })
+-- RESET DEFAULTS is the ENGINE's row: src/mods/ManagerState.lua appends one
+-- at the end of its own buildOptionRows.  0.1.0 through 0.3.0 appended a
+-- second one beside it, because this mod was written without reading that
+-- function to its end.  Nothing in the suite noticed -- the two carried
+-- different ids, sat inside the box, overlapped nothing and spelled only
+-- charmap characters.  What told them apart on screen is that they read the
+-- same, so that is what is asserted here.
+do
+  local state = decorated()
   local rows = state:buildOptionRows({ id = "t" },
     { { key = "a", type = "toggle", label = "A", default = true } })
-  T.eq(#rows, 1, "no reset row when the option is off")
+  local seen = {}
+  for _, row in ipairs(rows) do
+    local label = tostring(row.label)
+    T.check(not seen[label], "no two option rows read '" .. label .. "'")
+    seen[label] = true
+  end
 end
 
 do -- the options page clamps its own scroll, for its own window size

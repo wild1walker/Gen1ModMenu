@@ -30,8 +30,8 @@ return {
       "CANCEL is dropped from the game's own OPTION screen on Gen 1; B and "
         .. "START already leave that menu, so it was a second exit rather "
         .. "than the only one",
-      "a help line under the cards saying what the focused option accepts",
-      "a RESET DEFAULTS row on every mod's options page",
+      "a help line under the cards saying what the focused option accepts, "
+        .. "including on the engine's own RESET DEFAULTS row",
       "a mark legend on the ERRORS tab when there is nothing wrong",
     },
     known = {

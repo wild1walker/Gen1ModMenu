@@ -14,9 +14,9 @@
 
 A UI mod for [Gen1Recomp](https://github.com/bryanthaboi/gen1recomp): it
 redraws the in-game **MODS** screen. The mod list gets a status column,
-sorting and filters; the per-mod **OPTIONS** page gets a help line, a
-`CHANGED` marker and a `RESET DEFAULTS` row — all in the same framed-card
-idiom the game's own OPTION screen uses.
+sorting and filters; the per-mod **OPTIONS** page gets a help line and a
+`CHANGED` marker — all in the same framed-card idiom the game's own OPTION
+screen uses.
 
 Works on Red, Blue, Yellow and Gold/Silver (mod api 2). Nothing about how the
 manager *behaves* changes — enabling, dependency closures, staged changes,
@@ -90,8 +90,10 @@ off the schema:
 | number | the range, `1-8`, and the step when it is not 1 |
 | text | `UP TO 12 CHARS` |
 
-**`RESET DEFAULTS`** is the last card, and puts every row back to what its
-author shipped.
+The last card is **`RESET DEFAULTS`**, which puts every row back to what its
+author shipped. That row is the *engine's* — `ManagerState:buildOptionRows`
+appends it to every options page on its own. All this mod adds to it is the
+help line.
 
 There is no description field in the engine's option schema
 (`docs/mod-option-schema.md` is `key`, `type`, `label`, `default`, `choices`,
@@ -141,7 +143,6 @@ All under **MODS → Gen1ModMenu → OPTIONS**.
 - **WITH OPTIONS** — show only the mods that have something to configure.
 - **HELP LINE** — the line under the options list. Off gives its row back to
   the list, making it twelve.
-- **RESET ROW** — show `RESET DEFAULTS` on each mod's options page.
 - **START ROW** — label the START menu's row `MOD MENU` instead of `MODS`.
 - **HIDE CANCEL** — drop `CANCEL` from the game's own OPTION screen.
 - **KEEP CURSOR** — reopen the manager on the row you left it on.

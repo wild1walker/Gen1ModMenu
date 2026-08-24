@@ -51,10 +51,11 @@ Options.schema = {
 
   -- ------- the per-mod options page
 
+  -- RESET DEFAULTS is not a row here: the engine appends one of its own at
+  -- the end of every options page (src/mods/ManagerState.lua
+  -- buildOptionRows), and 0.1.0 through 0.3.0 shipped a second one beside
+  -- it.  All this mod adds to the engine's is the help line below.
   { key = "help_line", type = "toggle", label = "HELP LINE", default = true,
-    visible_if = { key = "presentation", equals = "modern" } },
-
-  { key = "reset_row", type = "toggle", label = "RESET ROW", default = true,
     visible_if = { key = "presentation", equals = "modern" } },
 
   -- ------- the menus outside the manager
