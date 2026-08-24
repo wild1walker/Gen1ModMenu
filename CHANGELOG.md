@@ -4,6 +4,39 @@ All notable changes to Gen1ModMenu are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this mod uses
 [semantic versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-08-24
+
+All three list tabs now look and behave alike. 0.2.0 through 0.3.1 drew
+`MODS` and `PROF` as cards and left `ERRS` in a framed window of its own,
+which is exactly what it looked like: a third page that did not match the
+other two.
+
+### Fixed
+
+- **A blank card on the `PROFILES` tab.** `ManagerState:profileRows` labels
+  each row with the profile's own name, so a profile saved without one drew
+  as an empty framed box. Any row with no readable label now reads
+  `(NO NAME)`. The row is the engine's; drawing it as nothing at all was
+  this mod's.
+- **No cursor on the `ERRORS` tab.** The cursor moves through those rows —
+  `moveCursor` skips headings, not inert rows — so a tab you could scroll
+  gave no sign of where you were in it. Vanilla's own `drawRows` marks any
+  non-heading row, inert included, and now so does this. The per-mod errors
+  and permissions screens got the same fix.
+- **The `ERRORS` tab is drawn like the other two**: cards on white paper,
+  with the same position counter, scroll arrow and tab caption, instead of
+  plain lines inside a bordered window.
+
+### Removed
+
+- **The mark legend on the `ERRORS` tab.** It was added in 0.1.0 to fill a
+  tab that usually has nothing in it, and it did not survive the move to
+  cards: six entries at four cards a screen turned a tab named for errors
+  into two screens of jargon. The marks are spelled out in words on each
+  mod's detail screen, one A-press from the list, which is where someone
+  wondering what `BLKD` means is already headed. A clean install's `ERRORS`
+  tab now says `NO ERRORS` and nothing else.
+
 ## [0.3.1] - 2026-08-24
 
 ### Fixed
@@ -228,6 +261,7 @@ all four of these did.
   of the visit. On top of both, the engine's own `Screens.build` falls back
   to its builtin manager if this mod's screen cannot be constructed.
 
+[0.4.0]: https://github.com/wild1walker/Gen1ModMenu/releases/tag/v0.4.0
 [0.3.1]: https://github.com/wild1walker/Gen1ModMenu/releases/tag/v0.3.1
 [0.3.0]: https://github.com/wild1walker/Gen1ModMenu/releases/tag/v0.3.0
 [0.2.0]: https://github.com/wild1walker/Gen1ModMenu/releases/tag/v0.2.0

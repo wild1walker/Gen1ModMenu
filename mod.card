@@ -25,6 +25,8 @@ return {
         .. "src/ui/OptionRows.lua, which the engine itself marks Gen 1 only",
     },
     added = {
+      "a row with no readable label -- a profile saved without a name -- "
+        .. "reads (NO NAME) rather than drawing an empty card",
       "the START menu's MODS row is relabelled MOD MENU (the engine's own "
         .. "row, renamed rather than duplicated)",
       "CANCEL is dropped from the game's own OPTION screen on Gen 1; B and "
@@ -32,7 +34,6 @@ return {
         .. "than the only one",
       "a help line under the cards saying what the focused option accepts, "
         .. "including on the engine's own RESET DEFAULTS row",
-      "a mark legend on the ERRORS tab when there is nothing wrong",
     },
     known = {
       "the OPTION screen's CANCEL is removed on Gen 1 only -- Gold's options "

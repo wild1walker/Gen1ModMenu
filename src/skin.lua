@@ -80,6 +80,7 @@ Skin.STRINGS = {
     pending = "PENDING CHANGES",
     noChanges = "NO CHANGES",
     options = "OPTIONS",
+    unnamed = "(NO NAME)",
     more = " MORE",
     changed = "CHANGED",
   },
@@ -276,36 +277,20 @@ local function newRenderer(mod, Rows, opt, Builtin)
     local rows = state:rowsForScreen()
     local scroll = math.max(1, state.scroll or 1)
 
-    -- The ERRORS tab is wrapped prose, a line at a time, and the mark legend
-    -- when there is none.  A card per line of a wrapped sentence would be
-    -- absurd, so that tab is plain lines -- eleven of them, which is what
-    -- ManagerState:moveCursor already clamps the scroll to.
-    if state.tab == 3 then
-      local top, window = 2, 13
-      local last = math.min(#rows, scroll + window - 1)
-      for i = scroll, last do
-        local row = rows[i]
-        local y = top + i - scroll
-        if row.state and row.state ~= "" then
-          pair(Font, row.label, row.state, y)
-        else
-          Font.draw(fit(Font, row.label, EDGE_X - LABEL_X), LABEL_X, y * 8)
-        end
-      end
-      if #rows > last then
-        Font.drawCode(Theme.moreArrow, 18 * 8, (top + window) * 8)
-      end
-      if not state.notice then Font.draw(TABS[state.tab], LABEL_X, 16 * 8) end
-      return
-    end
-
     for slot = 1, CARDS do
       local row = rows[scroll + slot - 1]
       if not row then break end
+      -- A card is a whole framed box, so a row that carries no readable
+      -- label comes out as an empty one -- which is what a profile saved
+      -- without a name looks like on the PROFILES tab.  Say so instead.
+      local label = row.label
+      if label == nil or tostring(label):match("^%s*$") then
+        label = S.line.unnamed
+      end
       -- The category rides on the card's second line beside the status.  A
       -- heading row would cost a whole card of the four there are, and the
       -- sort still groups the list whether or not it says so out loud.
-      drawCard(Font, Theme, slot, row.label, row.category,
+      drawCard(Font, Theme, slot, label, row.category,
                row.state ~= "ON" and row.state or nil,
                (scroll + slot - 1) == state.cursor)
     end
@@ -405,7 +390,10 @@ local function newRenderer(mod, Rows, opt, Builtin)
         end
         Font.draw(fit(Font, row.label, EDGE_X - x), x, y * 8)
       end
-      if not (row.inert or row.header) then drawCursor(state, i, y) end
+      -- vanilla's drawRows marks any non-heading row, inert included, and a
+      -- list you can scroll with nothing showing where you are in it is
+      -- exactly what the ERRORS tab looked like before
+      if not row.header then drawCursor(state, i, y) end
       y = y + 1
     end
     if #rows > last then
@@ -552,11 +540,11 @@ local function newRenderer(mod, Rows, opt, Builtin)
     -- white paper, no outer frame, and the cards themselves are the chrome.
     -- Everything else is prose or a short action list, and keeps the single
     -- bordered window that suits it.
-    -- The ERRORS tab is prose in a framed window like the detail screens,
-    -- not cards; everything else on the list is a card.
-    local carded = state.screen == "options"
-      or (state.screen == "list" and state.tab ~= 3)
-    if carded then
+    -- All three list tabs and the options page paint the way the game's own
+    -- OPTION screen does: white paper, no outer frame, the cards themselves
+    -- the chrome.  Detail, permissions, errors and apply are prose or a
+    -- short action list, and keep the single bordered window that suits it.
+    if state.screen == "list" or state.screen == "options" then
       love.graphics.setColor(1, 1, 1, 1)
       love.graphics.rectangle("fill", 0, 0, 160, 144)
       love.graphics.setColor(0, 0, 0, 1)
@@ -580,9 +568,7 @@ local function newRenderer(mod, Rows, opt, Builtin)
     Font.drawBox(0, 0, COLS, 18)
     love.graphics.setColor(0, 0, 0, 1)
 
-    if state.screen == "list" then
-      R.drawList(state)          -- the ERRORS tab; the rest went the card way
-    elseif state.screen == "detail" then
+    if state.screen == "detail" then
       R.drawDetail(state)
     elseif state.screen == "permissions" then
       R.drawSimple(state, S.line.permissions)

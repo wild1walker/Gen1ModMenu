@@ -374,19 +374,11 @@ do -- leaving the page must not re-clamp the list's scroll behind it
   T.eq(state.scroll, 6, "a B press out of the options leaves the list alone")
 end
 
-do -- the ERRORS tab explains the marks when it has nothing else to say
+do -- the ERRORS tab is the engine's own rows, untouched
   local state = decorated()
-  local rows = state:errorRows(nil)
-  T.eq(rows[1].header, true, "the legend opens with a heading")
-  T.eq(#rows, 1 + #Rows.LEGEND, "and lists every mark")
-  T.eq(rows[2].state, "", "the first entry explains the absence of a mark")
-  T.eq(rows[3].state, "OFF", "and the rest carry the mark they describe")
-
-  T.eq(#state:errorRows({ id = "one" }), 1,
-    "a per-mod errors screen is left exactly as the engine built it")
-
-  local vanilla = decorated({ presentation = "vanilla" })
-  T.eq(#vanilla:errorRows(nil), 1, "and VANILLA never grows the legend")
+  T.eq(#state:errorRows(nil), 1, "nothing is added to the tab's rows")
+  T.eq(state:errorRows(nil)[1].label, "NO ERRORS",
+    "and a clean install still just says so")
 end
 
 do -- the cursor comes back where it was left
@@ -540,11 +532,6 @@ do
   T.check(RealFont.width("RESET DEFAULTS") <= Skin.LINE_BUDGET,
     "the reset row fits its line")
 
-  -- the ERRORS-tab legend, drawn as label-plus-mark by the same pair()
-  for _, entry in ipairs(Rows.LEGEND) do
-    pairFits(entry[2], entry[1], "legend " .. (entry[1] == "" and "blank" or entry[1]))
-  end
-
   -- A mod NAME is data, not chrome: it can be any length, and a long one
   -- beside a four-glyph mark genuinely does not fit. What must hold is which
   -- half gives way -- pair() shortens the label and keeps the value, so the
@@ -572,8 +559,16 @@ local function renderCase(name, screen, setup, overrides)
     if self.screen == "list" then
       if self.tab == 1 then return self:modRows() end
       if self.tab == 2 then
+        -- what ManagerState:profileRows builds: a row per saved profile,
+        -- labelled p.name -- including one saved without a name, which is
+        -- the row that came out as an empty card -- then the actions
         return { { profile = { name = "PROFILE 1" }, label = "PROFILE 1",
-                   glyph = "!" } }
+                   glyph = "!" },
+                 { profile = { name = "" }, label = "" },
+                 { saveAs = true, label = "SAVE CURRENT AS.." },
+                 { exportProfile = true, label = "EXPORT.." },
+                 { importProfile = true, label = "IMPORT.." },
+                 { adhoc = true, label = "[AD-HOC] (LIVE)" } }
       end
       return self:errorRows(nil)
     elseif self.screen == "detail" then
@@ -731,6 +726,21 @@ do -- an overlay still reaches the engine's own modal
   state.overlay = { kind = "confirm", lines = { "RESTART NOW?" }, index = 1 }
   state:draw()
   T.eq(seen, 1, "the confirm modal is still drawn by the engine")
+end
+
+-- A card is a whole framed box, so a row with no readable label comes out as
+-- an empty one -- which is what a profile saved without a name looked like on
+-- the PROFILES tab.  The engine builds those rows (ManagerState:profileRows
+-- labels each one p.name), so the renderer is where it has to be caught.
+do
+  local marks = renderCase("a row with no name", "list", function(s)
+    s.tab = 2
+  end)
+  local said = false
+  for _, m in ipairs(marks) do
+    if m.what == Skin.STRINGS.line.unnamed then said = true end
+  end
+  T.check(said, "an unnamed row says so rather than drawing an empty card")
 end
 
 -- ------- the two menus outside the manager

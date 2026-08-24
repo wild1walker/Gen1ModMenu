@@ -193,21 +193,6 @@ local function decorate(mod, Rows, Skin, opt, state, Builtin)
     return result
   end
 
-  -- ------- the ERRORS tab, when there is nothing wrong
-
-  state.errorRows = function(self, m)
-    local rows = Builtin.errorRows(self, m)
-    if not modern() or m ~= nil then return rows end
-    if #rows ~= 1 or rows[1].label ~= "NO ERRORS" then return rows end
-    -- An otherwise empty tab is where someone wondering what STGD or BLKD
-    -- means will look, and it costs nothing to answer there.
-    local legend = { { header = true, label = "NO ERRORS" } }
-    for _, entry in ipairs(Rows.LEGEND) do
-      legend[#legend + 1] = { inert = true, label = entry[2], state = entry[1] }
-    end
-    return legend
-  end
-
   -- ------- cursor memory
 
   state.enter = function(self)

@@ -12,20 +12,11 @@ local Rows = {}
 -- tiles, the cursor owns one and a mod name wants the rest.  These are also
 -- the whole vocabulary the status column has, so every one of them is
 -- spelled out in the legend on the ERRORS tab.
+-- The whole vocabulary the status column has.  Each one is spelled out in
+-- words on the mod's own detail screen, which is one A-press from the list;
+-- 0.2.0 through 0.3.1 also listed them on the ERRORS tab, which turned a tab
+-- named for errors into two screens of jargon once it drew in cards.
 Rows.STATES = { "ON", "OFF", "STGD", "ERR", "BLKD", "SKIP" }
-
--- The mark, and what it means.  A healthy enabled mod is drawn with no mark
--- at all -- a column reading ON down the whole screen is not information, and
--- blanking it gives every label three more glyphs -- so the first entry
--- explains the absence rather than showing a mark that is never drawn.
-Rows.LEGEND = {
-  { "", "NO MARK: RUNNING" },
-  { "OFF", "DISABLED" },
-  { "STGD", "RESTART" },
-  { "ERR", "LOAD FAILED" },
-  { "BLKD", "DEPENDENCY" },
-  { "SKIP", "OTHER GAME" },
-}
 
 -- The same order of precedence ManagerState:glyphFor uses, so the column and
 -- the engine's own gutter glyph can never disagree about a mod.  `flags` is

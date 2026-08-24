@@ -65,13 +65,16 @@ at all — the column is for the exceptions:
 | `BLKD` | a dependency is not satisfied |
 | `SKIP` | enabled and fine, but not for this game |
 
-All six are spelled out on the `ERRORS` tab whenever there is nothing wrong to
-show there, and the full word is always one A-press away on the mod's own
-detail screen.
+The full word is always one A-press away, on the mod's own detail screen —
+`ENABLED`, `DISABLED`, `FAILED`, `BLOCKED`, `NOT THIS GAME`.
 
-Under the cards sits the position counter and the scroll arrow, and under
-those a caption line — the `MODS / PROF / ERRS` tabs on the list, and the
+**All three tabs** — `MODS`, `PROF` and `ERRS` — are drawn this way, and so
+is a mod's options page. Under the cards sits the position counter and the
+scroll arrow, and under those a caption line: the tabs on the list, and the
 mod's name on its options page, where the OPTION screen puts `CANCEL`.
+
+A row that carries no readable label — a profile saved without a name — draws
+as `(NO NAME)` rather than as an empty box.
 
 There are **no control hints**. Every screen here is A to choose, B to go
 back and the d-pad to move, the same as every other menu in the game.
