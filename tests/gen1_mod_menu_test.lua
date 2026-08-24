@@ -719,6 +719,129 @@ do -- an overlay still reaches the engine's own modal
   T.eq(seen, 1, "the confirm modal is still drawn by the engine")
 end
 
+-- ------- the two menus outside the manager
+
+local Menus = dofile(MOD_DIR .. "/src/menus.lua")
+
+-- a stand-in for the engine's hook bus: one chain, called the way
+-- src/mods/Hooks.lua calls it
+local function hookBus()
+  local chain = {}
+  return {
+    wrap = function(_, name, fn) chain[name] = fn end,
+    call = function(name, vanilla, ...)
+      if not chain[name] then return vanilla(...) end
+      return chain[name](vanilla, ...)
+    end,
+  }
+end
+
+local function startMenu(overrides)
+  local bus = hookBus()
+  Menus.installStartRow({ hooks = bus, ui = {}, log = modStub.log },
+                        reader(overrides))
+  return function(items)
+    return bus.call("ui.start_menu.items", function(_, list) return list end,
+                    {}, items)
+  end
+end
+
+do -- the engine's own row is renamed, not duplicated
+  local run = startMenu()
+  local out = run({ { label = "POKEDEX" }, { label = "MODS" },
+                    { label = "QUIT" } })
+  T.eq(#out, 3, "no second row is added beside the engine's")
+  T.eq(out[2].label, "MOD MENU", "the engine's MODS row is the one renamed")
+  T.eq(out[1].label, "POKEDEX", "and nothing else is touched")
+end
+
+do -- a build with no row of its own still gets a way in from here
+  local out = startMenu()({ { label = "POKEDEX" }, { label = "QUIT" } })
+  T.eq(#out, 3, "a row is appended when there is none to rename")
+  T.eq(out[3].label, "MOD MENU", "and it carries the same label")
+  T.check(type(out[3].onSelect) == "function", "and it opens something")
+end
+
+do -- both switches leave the menu exactly as the engine built it
+  local off = startMenu({ start_row = false })({ { label = "MODS" } })
+  T.eq(off[1].label, "MODS", "START ROW off leaves the engine's label")
+  local vanilla = startMenu({ presentation = "vanilla" })({ { label = "MODS" } })
+  T.eq(vanilla[1].label, "MODS", "and so does STYLE: VANILLA")
+end
+
+do -- a hook that is handed something other than a list hands it straight back
+  local bus = hookBus()
+  Menus.installStartRow({ hooks = bus, ui = {}, log = modStub.log }, reader())
+  local out = bus.call("ui.start_menu.items", function() return "not a list" end)
+  T.eq(out, "not a list", "a non-list result is passed through untouched")
+end
+
+-- The OPTION screen's cursor, with CANCEL no longer drawn.  The engine's own
+-- update is what handles input, including B and START; this only asserts
+-- where the cursor ends up afterwards, because that is all the decoration
+-- does -- the exit is never in its hands.
+do
+  local registered
+  local optionsMod = {
+    ui = {}, log = modStub.log,
+    content = { screens = { register = function(_, id, record)
+      registered = { id = id, record = record }
+    end } },
+  }
+  T.check(Menus.installOptionsScreen(optionsMod, Skin, reader()),
+    "the OPTION screen is registered")
+  T.eq(registered.id, "OptionsMenu", "under the engine's own screen id")
+
+  -- the builtin this stands in for: three rows, and an update that moves the
+  -- index the way src/ui/OptionsMenu.lua does, CANCEL included
+  local Builtin = {}
+  Builtin.__index = Builtin
+  local ROWS = { { label = "A" }, { label = "B" }, { label = "C" } }
+  function Builtin.new(game)
+    return setmetatable({ game = game, rows = ROWS, index = 1, scroll = 0 },
+                        Builtin)
+  end
+  function Builtin.draw() end
+  function Builtin.update(self, dir)
+    local cancelRow = #self.rows + 1
+    if dir == "up" then
+      self.index = self.index > 1 and self.index - 1 or cancelRow
+    elseif dir == "down" then
+      self.index = self.index < cancelRow and self.index + 1 or 1
+    end
+  end
+
+  -- drive the decoration over that stand-in
+  local state = Builtin.new({})
+  local decorate = registered.record.new
+  -- the real factory requires the engine module; here the behaviour under
+  -- test is the wrapper, so it is applied to the stand-in directly
+  local saved = package.loaded["src.ui.OptionsMenu"]
+  package.loaded["src.ui.OptionsMenu"] = Builtin
+  state = decorate({})
+  package.loaded["src.ui.OptionsMenu"] = saved
+
+  state.index = 1
+  state:update("up")
+  T.eq(state.index, #ROWS, "up from the first row lands on the last, not CANCEL")
+
+  state.index = #ROWS
+  state:update("down")
+  T.eq(state.index, 1, "down from the last row wraps to the first")
+
+  state.index = 2
+  state:update("down")
+  T.eq(state.index, 3, "and an ordinary move is left alone")
+end
+
+do -- the scroll clamp that replaces OptionRows.clampScroll
+  T.eq(Skin.clampPlainScroll(1, 0, 9), 0, "the top of the list needs no scroll")
+  T.eq(Skin.clampPlainScroll(9, 0, 9), 9 - Skin.CARDS,
+    "the bottom pulls the window down to it")
+  T.eq(Skin.clampPlainScroll(2, 6, 9), 1, "and moving back up pulls it up")
+  T.eq(Skin.clampPlainScroll(1, 0, 2), 0, "a list shorter than the window sits still")
+end
+
 -- ------- the whole mod through the real loader
 
 local run = T.sdk.loadMod(MOD_DIR)

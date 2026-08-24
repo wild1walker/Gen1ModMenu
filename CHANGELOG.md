@@ -4,6 +4,46 @@ All notable changes to Gen1ModMenu are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this mod uses
 [semantic versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-08-24
+
+Two edits outside the manager, both switched off by `STYLE: VANILLA` along
+with everything else.
+
+### Added
+
+- **The START menu's row reads `MOD MENU`.** The engine already puts one
+  there and labels it `MODS`, gated on at least one mod being installed
+  (`src/ui/StartMenu.lua`) — a condition this mod satisfies by existing — so
+  this renames that row rather than adding a second one beside it. Matched on
+  the label the engine would have produced, so a translation mod that rewrote
+  `MODS` is still recognised, and wrapped at the default hook priority rather
+  than outermost, so Gen1MenuManager can move, hide or pin it like any other
+  row. A build that gates the engine's row differently gets one appended
+  instead. Row: `START ROW`, on by default.
+- **`CANCEL` is gone from the game's own OPTION screen.** Row:
+  `HIDE CANCEL`, on by default. **Gen 1 only** — Gold's is a different screen
+  (`Gen2OptionsMenu`) with a different layout, one 18×16 box rather than four
+  20×4 ones, and is left alone rather than have Red's chrome painted over it.
+
+  `CANCEL` was never one of the rows: `src/ui/OptionsMenu.lua` appends it
+  after the `ui.options.rows` hook and draws it as `OptionRows`' fixed bottom
+  line, which is what stops a mod from orphaning the exit. It is also not the
+  only exit — **B and START both leave that menu**, with the same sound and
+  the same pop — so it was a second way out costing a line of a sixteen-line
+  screen.
+
+  The wrapper that removes it never touches input. The engine's own update
+  runs first and in full every frame; all that happens afterwards is that a
+  cursor parked on the row that is no longer drawn is moved onto one that is,
+  wrapping to the top if it arrived going down and to the last row if it
+  arrived going up. A bug in there can misplace the cursor. It cannot take
+  away the way out.
+
+  The screen is drawn with the same card primitive the mod's own screens use,
+  so the two cannot drift apart — and with no new engine require, because
+  `OptionRows` is on the loader's Gen 1-only list and reaching for it would
+  be a dead patch on a Gold boot.
+
 ## [0.2.0] - 2026-08-24
 
 Redrawn again, this time in the game's own OPTION-screen idiom rather than in
@@ -157,6 +197,7 @@ all four of these did.
   of the visit. On top of both, the engine's own `Screens.build` falls back
   to its builtin manager if this mod's screen cannot be constructed.
 
+[0.3.0]: https://github.com/wild1walker/Gen1ModMenu/releases/tag/v0.3.0
 [0.2.0]: https://github.com/wild1walker/Gen1ModMenu/releases/tag/v0.2.0
 [0.1.1]: https://github.com/wild1walker/Gen1ModMenu/releases/tag/v0.1.1
 [0.1.0]: https://github.com/wild1walker/Gen1ModMenu/releases/tag/v0.1.0

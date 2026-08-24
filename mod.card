@@ -25,11 +25,19 @@ return {
         .. "src/ui/OptionRows.lua, which the engine itself marks Gen 1 only",
     },
     added = {
+      "the START menu's MODS row is relabelled MOD MENU (the engine's own "
+        .. "row, renamed rather than duplicated)",
+      "CANCEL is dropped from the game's own OPTION screen on Gen 1; B and "
+        .. "START already leave that menu, so it was a second exit rather "
+        .. "than the only one",
       "a help line under the cards saying what the focused option accepts",
       "a RESET DEFAULTS row on every mod's options page",
       "a mark legend on the ERRORS tab when there is nothing wrong",
     },
     known = {
+      "the OPTION screen's CANCEL is removed on Gen 1 only -- Gold's options "
+        .. "screen is a different screen with a different layout, and is "
+        .. "left alone",
       "the manager's own behaviour is untouched -- enabling, dependency "
         .. "closures, profiles, apply-and-restart and safe mode are all "
         .. "still the engine's, and this mod only draws them",

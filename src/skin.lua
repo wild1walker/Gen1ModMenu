@@ -186,6 +186,49 @@ local function drawCard(Font, Theme, slot, label, value, mark, focused)
   if focused then Font.drawCode(Theme.cursor, CURSOR_X, (top + 1) * 8) end
 end
 
+-- The game's own OPTION screen, drawn exactly the way
+-- src/ui/OptionRows.lua draws it -- same boxes, same label and value lines,
+-- same cursor column, same more-arrow -- and without the fixed CANCEL line
+-- underneath.  Same primitive as the mod screens, so the two cannot drift
+-- apart, and no engine require: OptionRows is on the loader's Gen 1-only
+-- list, and reaching for it here would be a dead patch on a Gold boot.
+--
+-- B and START already leave this menu, with the same sound and the same
+-- pop (src/ui/OptionsMenu.lua:700), so CANCEL is a second way out rather
+-- than the only one.
+function Skin.drawPlainRows(ui, game, rows, index, scroll)
+  local Font, Theme = ui.Font, ui.Theme
+  scroll = scroll or 0
+  love.graphics.setColor(1, 1, 1, 1)
+  love.graphics.rectangle("fill", 0, 0, 160, 144)
+  love.graphics.setColor(0, 0, 0, 1)
+  for slot = 1, CARDS do
+    local row = rows[scroll + slot]
+    if not row then break end
+    local value = ""
+    if row.value then
+      local ok, text = pcall(row.value, game)
+      value = ok and tostring(text or "") or ""
+    end
+    drawCard(Font, Theme, slot, row.label, value, nil, (scroll + slot) == index)
+  end
+  if #rows > scroll + CARDS then
+    Font.drawCode(Theme.moreArrow, 18 * 8, MARGIN_ROW * 8)
+  end
+  love.graphics.setColor(1, 1, 1, 1)
+end
+
+-- What OptionRows.clampScroll does, without requiring it, and without the
+-- bottomRow arm -- there is no bottom row here any more.
+function Skin.clampPlainScroll(index, scroll, total)
+  scroll = scroll or 0
+  if index <= scroll then return math.max(0, index - 1) end
+  if index > scroll + CARDS then return index - CARDS end
+  local tail = math.max(0, total - CARDS)
+  if scroll > tail then return tail end
+  return scroll
+end
+
 -- ------- the renderer
 
 local function newRenderer(mod, Rows, opt, Builtin)

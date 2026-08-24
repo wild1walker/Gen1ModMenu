@@ -98,6 +98,35 @@ There is no description field in the engine's option schema
 `min`, `max`, `step`, `maxLen`, `visible_if`), so the help line says what the
 row *accepts* rather than inventing prose the author never wrote.
 
+## Outside the manager
+
+Two smaller edits, both switched off by `STYLE: VANILLA` along with
+everything else.
+
+- **The START menu row reads `MOD MENU`.** The engine already puts a row
+  there, gated on at least one mod being installed, and labels it `MODS` —
+  this renames that row rather than adding a second one beside it. It is
+  matched on the label the engine would have produced, so a translation mod
+  that rewrote `MODS` is still recognised, and it is renamed at the default
+  hook priority so Gen1MenuManager can still move, hide or pin it like any
+  other row.
+- **`CANCEL` is gone from the game's own OPTION screen.** It was never one of
+  the rows — the engine appends it after the `ui.options.rows` hook and draws
+  it as the fixed bottom line, which is what stops a mod from orphaning the
+  exit. It is also not the only exit: **B and START both leave that menu**,
+  with the same sound and the same pop. So the line goes back to the screen.
+
+  The wrapper that does this never touches input. The engine's own update
+  runs first and in full every frame; all that happens afterwards is that a
+  cursor parked on the row that is no longer drawn gets moved onto one that
+  is. A bug in there can misplace the cursor — it cannot take away the way
+  out.
+
+  **Gen 1 only.** Gold's options screen is a different screen
+  (`Gen2OptionsMenu`) with a different layout — one 18×16 box rather than
+  four 20×4 ones — so it is left alone rather than have Red's chrome painted
+  over it.
+
 ## Options
 
 All under **MODS → Gen1ModMenu → OPTIONS**.
@@ -113,6 +142,8 @@ All under **MODS → Gen1ModMenu → OPTIONS**.
 - **HELP LINE** — the line under the options list. Off gives its row back to
   the list, making it twelve.
 - **RESET ROW** — show `RESET DEFAULTS` on each mod's options page.
+- **START ROW** — label the START menu's row `MOD MENU` instead of `MODS`.
+- **HIDE CANCEL** — drop `CANCEL` from the game's own OPTION screen.
 - **KEEP CURSOR** — reopen the manager on the row you left it on.
 
 Neither filter can hide Gen1ModMenu itself. Both are set from its own options

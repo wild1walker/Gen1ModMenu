@@ -53,9 +53,13 @@ return function(mod)
   local Rows = loadModule("rows")
   local Skin = loadModule("skin")
   local Screen = loadModule("screen")
-  if not (Rows and Skin and Screen) then return end
+  local Menus = loadModule("menus")
+  if not (Rows and Skin and Screen and Menus) then return end
 
   mod.exports.installed = Screen.install(mod, Rows, Skin, opt)
+  -- the START menu's row and the OPTION screen's CANCEL, both outside the
+  -- manager and both gated on the same STYLE row
+  Menus.install(mod, Skin, opt)
 
   -- For a neighbouring mod that wants the same list model: the sorting and
   -- filtering are pure, and nothing in them needs this screen.

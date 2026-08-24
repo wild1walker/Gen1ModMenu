@@ -57,6 +57,20 @@ Options.schema = {
   { key = "reset_row", type = "toggle", label = "RESET ROW", default = true,
     visible_if = { key = "presentation", equals = "modern" } },
 
+  -- ------- the menus outside the manager
+
+  -- The engine's own row here is labelled MODS and is already wired to the
+  -- manager, so this renames it rather than adding a second way in.
+  { key = "start_row", type = "toggle", label = "START ROW", default = true,
+    visible_if = { key = "presentation", equals = "modern" } },
+
+  -- CANCEL on the game's OPTION screen.  B and START already leave that
+  -- menu, so the row is a second exit rather than the only one -- but it is
+  -- the engine's belt-and-braces, so it is a row here and not a decision.
+  { key = "hide_cancel", type = "toggle", label = "HIDE CANCEL",
+    default = true,
+    visible_if = { key = "presentation", equals = "modern" } },
+
   -- ------- everywhere
 
   { key = "cursor_memory", type = "toggle", label = "KEEP CURSOR",
