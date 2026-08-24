@@ -102,6 +102,13 @@ end
 -- screen a player uses to fix a broken mod.  Anything out of vocabulary
 -- falls back to the row default, and every default here is the vanilla
 -- answer or the safe one.
+-- The choices a row offers, for anywhere that needs to show them outside the
+-- options page -- the START menu on the mod list builds its rows from this,
+-- so the two can never disagree about what the sorts are called.
+function Options.choices(key)
+  return (byKey[key] or {}).choices
+end
+
 function Options.reader(mod)
   return function(key)
     local row = byKey[key]

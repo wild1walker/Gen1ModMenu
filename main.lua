@@ -56,7 +56,7 @@ return function(mod)
   local Menus = loadModule("menus")
   if not (Rows and Skin and Screen and Menus) then return end
 
-  mod.exports.installed = Screen.install(mod, Rows, Skin, opt)
+  mod.exports.installed = Screen.install(mod, Rows, Skin, Options, opt)
   -- the START menu's row and the OPTION screen's CANCEL, both outside the
   -- manager and both gated on the same STYLE row
   Menus.install(mod, Skin, opt)

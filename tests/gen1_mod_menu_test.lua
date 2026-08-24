@@ -247,6 +247,10 @@ local function fakeManager(overrides)
   }, Builtin)
   function state.isStaged() return false end
   function state.runsHere() return true end
+  function state:focusedRow() return self:rowsForScreen()[self.cursor] end
+  function state:beginToggle(m) self.toggled = m end
+  function Builtin.pressStart(self) self.applied = true end
+  function Builtin.quickToggle(self) self.quickToggled = true end
   -- part of the surface being stood in for: the decoration clamps the list's
   -- scroll against it, because the engine's own clamp is sized for a window
   -- the cards no longer draw
@@ -280,13 +284,33 @@ local function fakeManager(overrides)
   return state, Builtin, calls
 end
 
-local modStub = { id = "gen1_mod_menu", ui = {},
+-- src/ui/Menu.lua's shape: new(game, items, opts) returning something the
+-- caller pushes.  The suite drives the items rather than the widget.
+local pushed
+local FakeMenu = { new = function(game, items, opts)
+  pushed = { items = items, opts = opts }
+  return pushed
+end }
+
+local modStub = { id = "gen1_mod_menu", ui = { Menu = FakeMenu },
   log = { warn = function() end, error = function() end,
           info = function() end } }
 
+local function labelsOf(items)
+  local out = {}
+  for i, item in ipairs(items) do out[i] = item.label end
+  return out
+end
+
+local function findRow(items, label)
+  for _, item in ipairs(items) do
+    if item.label == label then return item end
+  end
+end
+
 local function decorated(overrides, stateOverrides)
   local state, Builtin, calls = fakeManager(stateOverrides)
-  Screen.decorate(modStub, Rows, Skin, reader(overrides), state, Builtin)
+  Screen.decorate(modStub, Rows, Skin, Options, reader(overrides), state, Builtin)
   return state, Builtin, calls
 end
 
@@ -599,7 +623,7 @@ local function renderCase(name, screen, setup, overrides)
   end
   function state:stagedList() return self.staged or {} end
 
-  Screen.decorate(renderMod, Rows, Skin, reader(overrides), state, Builtin)
+  Screen.decorate(renderMod, Rows, Skin, Options, reader(overrides), state, Builtin)
   state.screen = screen
   if setup then setup(state) end
   state:draw()
@@ -722,7 +746,8 @@ do -- an overlay still reaches the engine's own modal
   Builtin.drawOverlay = function() seen = seen + 1 end
   function state:rowsForScreen() return self:modRows() end
   Screen.decorate({ id = "gen1_mod_menu", ui = { Font = font, Theme = RealTheme },
-                    log = modStub.log }, Rows, Skin, reader(), state, Builtin)
+                    log = modStub.log }, Rows, Skin, Options, reader(), state,
+                  Builtin)
   state.overlay = { kind = "confirm", lines = { "RESTART NOW?" }, index = 1 }
   state:draw()
   T.eq(seen, 1, "the confirm modal is still drawn by the engine")
@@ -741,6 +766,113 @@ do
     if m.what == Skin.STRINGS.line.unnamed then said = true end
   end
   T.check(said, "an unnamed row says so rather than drawing an empty card")
+end
+
+-- ------- START and SELECT on the mod list
+
+local function listMenu(overrides)
+  pushed = nil
+  local state = decorated(overrides or { sort = "name" })
+  state.game = { stack = { push = function() end } }
+  state.cursor = 1
+  state:pressStart()
+  return state, pushed
+end
+
+do -- START opens the menu, with the focused mod's toggle first
+  local state, menu = listMenu()
+  T.check(menu ~= nil, "START opens a menu instead of going to APPLY")
+  T.eq(state.applied, nil, "and does not apply on the way")
+  T.eq(menu.items[1].label, "DISABLE",
+    "the focused mod's toggle is the first row")
+
+  menu.items[1].onSelect()
+  T.check(state.toggled ~= nil, "and it is the engine's own beginToggle")
+end
+
+do -- a disabled mod offers to enable it instead
+  local state, menu = listMenu()
+  state.status.available[1].enabled = false
+  pushed = nil
+  state.cursor = 1
+  state:pressStart()
+  T.eq(pushed.items[1].label, "ENABLE", "a disabled mod reads ENABLE")
+  state.status.available[1].enabled = true
+end
+
+do -- every sort is offered, and the active one is bracketed
+  local _, menu = listMenu({ sort = "name" })
+  local labels = labelsOf(menu.items)
+  T.check(findRow(menu.items, "[BY NAME]"), "the active sort is bracketed")
+  T.check(findRow(menu.items, "BY CATEGORY"), "and the others are not")
+  T.check(findRow(menu.items, "BY ENABLED"), "every choice is offered")
+  T.check(findRow(menu.items, "BY PROBLEMS"), "including PROBLEMS")
+  T.eq(#labels, 1 + 4 + 2,
+    "the toggle, the four sorts and the two filters, and nothing else")
+end
+
+do -- picking a sort writes it through the engine's own setOption
+  local state, menu = listMenu({ sort = "name" })
+  state.cursor = 3
+  findRow(menu.items, "BY PROBLEMS").onSelect()
+  T.eq(state.written.sort, "status", "the chosen sort is stored")
+  T.eq(state.cursor, 1, "and the cursor goes back to the top of the list")
+end
+
+do -- the filters are toggles that show their own state
+  local state, menu = listMenu()
+  T.check(findRow(menu.items, "HIDE OFF: OFF"), "a filter shows its state")
+  findRow(menu.items, "HIDE OFF: OFF").onSelect()
+  T.eq(state.written.hide_disabled, true, "and selecting it turns it on")
+
+  local _, on = listMenu({ hide_disabled = true })
+  T.check(findRow(on.items, "HIDE OFF: ON"), "and it reads ON once it is")
+end
+
+-- APPLY & RESTART is what ManagerState:pressStart reaches, and it is the only
+-- route there.  START no longer goes to it on this tab, so SELECT must.
+do
+  local state = decorated()
+  state.game = { stack = { push = function() end } }
+  state:quickToggle()
+  T.eq(state.applied, true, "SELECT applies")
+  T.eq(state.quickToggled, nil, "rather than quick-toggling")
+end
+
+do -- the other tabs keep both keys exactly as the engine has them
+  for _, tab in ipairs({ 2, 3 }) do
+    local state = decorated()
+    state.tab = tab
+    state.game = { stack = { push = function() end } }
+    pushed = nil
+    state:pressStart()
+    T.eq(pushed, nil, "tab " .. tab .. " keeps vanilla START")
+    T.eq(state.applied, true, "which is the engine's own")
+    state:quickToggle()
+    T.eq(state.quickToggled, true, "and vanilla SELECT")
+  end
+end
+
+do -- and so does STYLE: VANILLA
+  local state = decorated({ presentation = "vanilla" })
+  state.game = { stack = { push = function() end } }
+  pushed = nil
+  state:pressStart()
+  T.eq(pushed, nil, "VANILLA leaves START alone")
+  state:quickToggle()
+  T.eq(state.quickToggled, true, "and SELECT with it")
+end
+
+do -- a row that is not a mod offers no toggle, and does not crash
+  local state = decorated({ sort = "name", hide_disabled = true,
+                            only_options = true })
+  state.status.available = {}
+  state.game = { stack = { push = function() end } }
+  pushed = nil
+  state:pressStart()
+  T.check(pushed ~= nil, "the menu still opens on an empty list")
+  T.eq(pushed.items[1].label, "BY CATEGORY",
+    "and leads with the sorts, having no mod to toggle")
 end
 
 -- ------- the two menus outside the manager

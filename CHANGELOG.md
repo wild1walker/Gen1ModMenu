@@ -4,6 +4,39 @@ All notable changes to Gen1ModMenu are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this mod uses
 [semantic versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-08-24
+
+### Added
+
+- **A list menu on `START`.** The `MODS` tab's `START` now opens a menu
+  carrying the focused mod's `ENABLE` / `DISABLE`, the four sort orders with
+  the active one bracketed, and the two filters showing their own state. The
+  sorts and filters were previously only on this mod's own options page,
+  three screens away from the list they arrange.
+
+### Changed
+
+- **`START` and `SELECT` traded jobs on the `MODS` tab.** `START` opens the
+  menu; `SELECT` applies staged changes. The manager has no spare keys — up
+  and down are the cursor, left and right the tabs, A opens and B goes back —
+  so the two with slack in them swapped.
+
+  Neither job is lost. Vanilla's `SELECT` quick-toggle is the menu's first
+  row and the cursor opens on it, so `START` then `A` is the same toggle one
+  keypress later. And `APPLY & RESTART` — which `ManagerState:pressStart` is
+  the only route to — is what `SELECT` now does, by calling that same
+  `pressStart`, so safe mode and the `NO CHANGES` notice are unchanged.
+
+  Only the `MODS` tab. `PROFILES` spends both keys itself (`START` deletes a
+  profile, `SELECT` renames one), the `ERRORS` tab keeps `START` as a second
+  way to `APPLY`, and the detail screen keeps `SELECT` for toggling the mod
+  it is showing.
+
+  The menu is the engine's own `src/ui/Menu.lua`, reached through `mod.ui`,
+  so it sizes itself to its widest label and draws in the same chrome every
+  other menu in the game does. Selecting a sort or a filter writes it through
+  `ManagerState:setOption`, the engine's only writer for these.
+
 ## [0.4.0] - 2026-08-24
 
 All three list tabs now look and behave alike. 0.2.0 through 0.3.1 drew
@@ -261,6 +294,7 @@ all four of these did.
   of the visit. On top of both, the engine's own `Screens.build` falls back
   to its builtin manager if this mod's screen cannot be constructed.
 
+[0.5.0]: https://github.com/wild1walker/Gen1ModMenu/releases/tag/v0.5.0
 [0.4.0]: https://github.com/wild1walker/Gen1ModMenu/releases/tag/v0.4.0
 [0.3.1]: https://github.com/wild1walker/Gen1ModMenu/releases/tag/v0.3.1
 [0.3.0]: https://github.com/wild1walker/Gen1ModMenu/releases/tag/v0.3.0

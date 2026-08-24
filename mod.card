@@ -25,6 +25,9 @@ return {
         .. "src/ui/OptionRows.lua, which the engine itself marks Gen 1 only",
     },
     added = {
+      "START on the mod list opens a menu with the focused mod's "
+        .. "ENABLE/DISABLE, the four sort orders and the two filters; "
+        .. "SELECT applies staged changes, which is what START used to do",
       "a row with no readable label -- a profile saved without a name -- "
         .. "reads (NO NAME) rather than drawing an empty card",
       "the START menu's MODS row is relabelled MOD MENU (the engine's own "

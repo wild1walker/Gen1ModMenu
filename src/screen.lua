@@ -20,7 +20,7 @@ local Screen = {}
 -- screen, before Game:adoptSave has bound a playthrough to write to.
 local memory = {}
 
-local function decorate(mod, Rows, Skin, opt, state, Builtin)
+local function decorate(mod, Rows, Skin, Options, opt, state, Builtin)
   local R = Skin.newRenderer(mod, Rows, opt, Builtin)
   local broken = false
   local warned = {}
@@ -215,6 +215,95 @@ local function decorate(mod, Rows, Skin, opt, state, Builtin)
     return result
   end
 
+  -- ------- START and SELECT on the mod list
+  --
+  -- The manager leaves no key spare -- up and down are the cursor, left and
+  -- right the tabs, A opens and B goes back -- so the sorts and filters lived
+  -- only on this mod's own options page, three screens away from the list
+  -- they arrange.  The two keys with slack in them trade jobs here:
+  --
+  --   START  opens this menu, instead of going straight to APPLY
+  --   SELECT applies, instead of quick-toggling the focused mod
+  --
+  -- Neither job is lost.  The toggle is the first row of the menu and the
+  -- cursor opens on it, so START then A is vanilla's SELECT one keypress
+  -- later.  And APPLY & RESTART -- which ManagerState:pressStart is the only
+  -- route to -- is now what SELECT does, by calling that same pressStart, so
+  -- safe mode and the NO CHANGES notice behave exactly as they always did.
+  --
+  -- Only the MODS tab.  PROFILES spends both keys itself (START deletes a
+  -- profile, SELECT renames one), the ERRORS tab keeps START as a second way
+  -- to APPLY, and the detail screen keeps SELECT for toggling the mod it is
+  -- showing.
+  local function openListMenu(self)
+    local Menu = mod.ui.Menu
+    local items = {}
+
+    local row = self:focusedRow()
+    if row and row.mod then
+      items[#items + 1] = {
+        label = row.mod.enabled and "DISABLE" or "ENABLE",
+        -- the engine's own toggle: it resolves the dependency closure, stages
+        -- the change and raises the cascade prompt when one is needed, none
+        -- of which is reimplemented here
+        onSelect = function() self:beginToggle(row.mod) end,
+      }
+    end
+
+    local current = opt("sort")
+    for _, choice in ipairs(Options.choices("sort") or {}) do
+      local label = "BY " .. tostring(choice[1])
+      -- the active one is bracketed, the way this mod already marks the
+      -- active tab
+      items[#items + 1] = {
+        label = choice[2] == current and ("[" .. label .. "]") or label,
+        onSelect = function()
+          self:setOption(mod.id, "sort", choice[2])
+          -- the arrangement changed under the cursor, so it goes back to the
+          -- top rather than to whichever mod is at its index now
+          self.cursor, self.scroll = 1, 1
+          self:snapCursor()
+        end,
+      }
+    end
+
+    local function toggle(key, label)
+      local on = opt(key)
+      items[#items + 1] = {
+        label = label .. ": " .. (on and "ON" or "OFF"),
+        onSelect = function()
+          self:setOption(mod.id, key, not on)
+          self.cursor, self.scroll = 1, 1
+          self:snapCursor()
+        end,
+      }
+    end
+    toggle("hide_disabled", "HIDE OFF")
+    toggle("only_options", "W/OPTIONS")
+
+    self.game.stack:push(Menu.new(self.game, items, { maxVisible = 7 }))
+  end
+
+  local function onModsTab(self)
+    return modern() and self.screen == "list" and self.tab == 1
+  end
+
+  state.pressStart = function(self)
+    if not onModsTab(self) then return Builtin.pressStart(self) end
+    local ok, err = pcall(openListMenu, self)
+    if ok then return end
+    warnOnce("listMenu", "the list menu could not be opened (%s) -- START "
+      .. "does what it always did", tostring(err))
+    return Builtin.pressStart(self)
+  end
+
+  state.quickToggle = function(self)
+    if not onModsTab(self) then return Builtin.quickToggle(self) end
+    -- the engine's own START: the APPLY screen when something is staged, the
+    -- NO CHANGES notice when nothing is, and safe mode either way
+    return Builtin.pressStart(self)
+  end
+
   -- ------- drawing
 
   state.draw = function(self)
@@ -232,7 +321,7 @@ end
 
 Screen.decorate = decorate
 
-function Screen.install(mod, Rows, Skin, opt)
+function Screen.install(mod, Rows, Skin, Options, opt)
   local ok, err = pcall(function()
     mod.content.screens:register("ManagerState", {
       new = function(game)
@@ -246,7 +335,8 @@ function Screen.install(mod, Rows, Skin, opt)
             .. "-- leaving the screen alone", tostring(Builtin))
           error("gen1_mod_menu: no builtin manager to decorate", 0)
         end
-        return decorate(mod, Rows, Skin, opt, Builtin.new(game), Builtin)
+        return decorate(mod, Rows, Skin, Options, opt, Builtin.new(game),
+                        Builtin)
       end,
     })
   end)
