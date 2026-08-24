@@ -5,6 +5,10 @@
 <h1 align="center">Gen1ModMenu</h1>
 
 <p align="center">
+  <a href="https://wild1walker.github.io/Gen1Wild/"><img src="docs/lineup.png" alt="Check out my other mods!" width="880"></a>
+</p>
+
+<p align="center">
   <b>The mod manager, made readable</b>
 </p>
 

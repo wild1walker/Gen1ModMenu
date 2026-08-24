@@ -1,6 +1,6 @@
 # Gen1ModMenu — build brief
 
-Status: **awaiting `go`**. Nothing is built yet.
+Status: **shipped as v0.1.0** — https://github.com/wild1walker/Gen1ModMenu/releases/tag/v0.1.0
 Written after Phase 0 (conventions) and Phase 2 (engine trace) of `/gen1wildmod`.
 
 ```
@@ -102,13 +102,46 @@ Out of scope: the launcher's own mod-options UI (src/import/LauncherSettings)
   `permissions: []`, `games: ["all"]`, `game_version: ">=0.0.0-0 <2.0.0"`.
 - Licence MIT, matching Gen1SoundQOL and Gen1ModernBag.
 
-## Open questions (Phase 3, unanswered)
+## Decisions taken
 
-1. Mechanism: decorate the live instance (recommended) or own replacement screen?
-2. Reskin scope: options view only (recommended) / options + list / all six modes?
-3. Which decorations (header bar, value column, help line, changed-marker,
-   scroll indicator, category rules, glyph legend)?
-4. Which QOL features (sort, filters, letter-jump, cursor memory,
-   RESET TO DEFAULTS, an all-mods flat options view)?
-5. Cover Gold as well (recommended) or Gen 1 only for v0.1.0?
-6. Ship a PRESENTATION: MODERN/VANILLA row (recommended)?
+1. **Mechanism** — a full replacement screen, per Wild. Registered in
+   `Data.screens` under "ManagerState"; the instance handed back is the
+   engine's own with its draw methods swapped, so the manager's logic stays
+   the engine's. That costs `engine_internals` (reaching the builtin means
+   requiring it by name) and the alternative -- reimplementing the toggle,
+   profile and apply logic to avoid the permission -- was declined as the one
+   place a divergence bricks boots rather than looking like a skin bug.
+2. **Scope** — all six modes redrawn (list, detail, options, permissions,
+   errors, apply). Forced by the mechanism: overriding `draw` means every
+   mode is ours or it renders nothing. The confirm modal still goes to
+   `Builtin.drawOverlay`.
+3. **Decorations** — header bar with name and version, right-aligned value
+   column, rules, help line, `.` changed-marker, scroll arrow and position
+   counter, category headings with rules, and the mark legend on the ERRORS
+   tab when it is otherwise empty.
+4. **QOL** — four sort orders, two filters, RESET DEFAULTS, cursor memory.
+   All set from this mod's own OPTIONS rows: the manager leaves no key free.
+   Letter-jump was dropped (left/right are the tabs) and an all-mods flat
+   options view deferred.
+5. **Gold** — covered, and it fixes the OptionRows chrome bug there.
+6. **Escape hatch** — `PRESENTATION: MODERN/VANILLA`, plus permanent demotion
+   on a draw that throws, plus `Screens.build`'s own pcall.
+
+## What shipped
+
+- 165 checks, all four modkit gates green, artifact verified by extracting
+  the built zip into an engine checkout and re-running everything.
+- Two engine bugs fixed as a side effect: the OptionRows chrome on Gold, and
+  vanilla's detail screen drawing its ninth action row at tile 19 of an
+  18-tile screen.
+- One bug caught by the suite's own charmap guard: a `+N` overflow marker on
+  PENDING CHANGES, where the charmap has no `+`.
+- Index wired: `mods/Wild@gen1_mod_menu/`, a cog icon in `make_icons.py`, all
+  ten lineup strips regenerated, README row.
+
+## Deferred
+
+- An "ALL OPTIONS" view listing every installed mod's options in one flat
+  list.
+- The engine's own `APPLY & RESTART` label carries an `&`, which the charmap
+  does not have, so it already draws as a gap. Not this mod's to fix.
