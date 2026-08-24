@@ -96,14 +96,33 @@ The header names the page you are on. Left and right move between `MODS`,
 +------------------+
 ```
 
-A list row is one thing — a name — so it is a single-line box, and four fit
-between the two bands. An option row is two things, a label and its value,
-which is why a mod's options page keeps the four-tile cards the game's own
-OPTION screen uses and the list does not.
+**A mod's options page wears the same three bands**: the header names the mod
+being edited with the position count beside it, and the info box under the
+cards carries the help line for whichever row the cursor is on.
 
-The info box carries the focused mod's category and its state in words. Any
-other row names itself there instead, which is also how a label too long for
-its own line gets shown in full.
+```
++------------------+
+| Gen1ModMenu  2/8 |
++------------------+
++------------------+
+|>SORT BY          |
+|   CATEGORY       |
++------------------+
+    ...
++------------------+
+| CATEGORY / NAME  |
++------------------+
+```
+
+A list row is one thing — a name — so it is a single-line box and four fit
+between the bands. An option row is two things, a label and its value, so it
+keeps the four-tile card the game's own OPTION screen uses, and three of
+those fit.
+
+The info box always names what the cursor is on: the focused mod's category
+and its state in words on the list, the focused option's help line on an
+options page. Anything else names itself there, which is also how a label too
+long for its own line gets shown in full.
 
 A mod's options page keeps its caption at the bottom instead, because that
 line names the mod being edited — it says where you are rather than being
@@ -213,8 +232,8 @@ All under **MODS → Gen1ModMenu → OPTIONS**.
   blocked mods to the top.
 - **HIDE OFF** — drop disabled mods from the list.
 - **WITH OPTIONS** — show only the mods that have something to configure.
-- **HELP LINE** — the line under the options list. Off gives its row back to
-  the list, making it twelve.
+- **HELP LINE** — what the info box under a mod's options shows: the focused
+  row's help line, or its full label when off.
 - **START ROW** — label the START menu's row `MOD MENU` instead of `MODS`.
 - **HIDE CANCEL** — drop `CANCEL` from the game's own OPTION screen.
 - **KEEP CURSOR** — reopen the manager on the row you left it on.

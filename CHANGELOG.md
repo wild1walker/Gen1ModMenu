@@ -4,6 +4,34 @@ All notable changes to Gen1ModMenu are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this mod uses
 [semantic versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.1] - 2026-08-24
+
+### Changed
+
+- **A mod's options page wears the same three bands as the list.** Its name
+  and position count move from the bottom caption into the header box, and
+  the help line moves from a bare row into the info box under the cards.
+  Three cards fit between the two bands where four fitted without them — an
+  option still needs both its lines, which is what a card is for.
+
+- **The info box always names what the cursor is on**, on both banded
+  screens. With `HELP LINE` off it shows the focused row's own label, which
+  is worth having: a label too long for its card is readable there.
+
+### Fixed
+
+- **A notice was drawn twice on a mod's options page** — once in the new
+  header band and once on the old caption row, which is now the info box's
+  bottom border.
+
+- **The bounds guard was letting text onto a border.** 0.6.0 loosened it to
+  allow rows 0 and 17 while the list wore a bare title bar and the options
+  page a bare caption. Neither is bare any more: rows 0 and 17 belong to a
+  border on every screen this mod draws, framed or banded, so text lives on
+  rows 1 to 16 everywhere and one bound covers the lot. The loosened bound is
+  what let the duplicate notice above go unnoticed; the tightened one
+  reproduces it.
+
 ## [0.7.0] - 2026-08-24
 
 ### Changed
@@ -363,6 +391,7 @@ all four of these did.
   of the visit. On top of both, the engine's own `Screens.build` falls back
   to its builtin manager if this mod's screen cannot be constructed.
 
+[0.7.1]: https://github.com/wild1walker/Gen1ModMenu/releases/tag/v0.7.1
 [0.7.0]: https://github.com/wild1walker/Gen1ModMenu/releases/tag/v0.7.0
 [0.6.0]: https://github.com/wild1walker/Gen1ModMenu/releases/tag/v0.6.0
 [0.5.0]: https://github.com/wild1walker/Gen1ModMenu/releases/tag/v0.5.0

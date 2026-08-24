@@ -383,7 +383,7 @@ do -- the options page clamps its own scroll, for its own window size
   for i = 1, 20 do state.optionRows[i] = { id = i, label = "R" .. i } end
   state.cursor, state.scroll = 15, 0
   state:updateOptions({})
-  T.eq(state.scroll, 15 - Skin.CARDS, "the cursor is pulled into the cards")
+  T.eq(state.scroll, 15 - Skin.OPT_COUNT, "the cursor is pulled into the cards")
   state.cursor, state.scroll = 2, 8
   state:updateOptions({})
   T.eq(state.scroll, 1, "and back up again when it moves the other way")
@@ -428,7 +428,7 @@ do -- the window the options page draws and the one it clamps to agree, and
     for i = 1, 20 do state.optionRows[i] = { id = i } end
     state.cursor, state.scroll = 13, 0
     state:updateOptions({})
-    T.eq(state.scroll, 13 - Skin.CARDS,
+    T.eq(state.scroll, 13 - Skin.OPT_COUNT,
       "the options page clamps to the cards with help " ..
       (help and "on" or "off"))
   end
@@ -455,14 +455,15 @@ RealTheme.load(Fixtures)
 
 local LEFT, RIGHT = 8, 152
 
--- What each kind of screen may draw on.  The carded screens are frameless
--- white paper, so the list's title bar on row 0 and the options page's
--- caption on row 17 are both legitimate; the framed ones own rows 0 and 17
--- with their border and may only use the interior.
-local function boundsFor(screen)
-  if screen == "list" or screen == "options" then return 0, 136 end
-  return 8, 128
-end
+-- Rows 0 and 17 belong to a border on every screen this mod draws: the
+-- framed ones have their window's, and the banded ones have their header
+-- box's top and their info box's bottom.  So text lives on rows 1 to 16,
+-- everywhere, and one bound covers the lot.
+--
+-- 0.6.0 loosened this to allow rows 0 and 17 while the list wore a bare
+-- title bar and the options page a bare caption.  Neither is bare any more,
+-- and the loosened bound let a notice be drawn onto the info box's border.
+local TOP, BOTTOM = 8, 128
 
 -- Every character this screen draws has to exist in the Game Boy charmap.
 -- It has no + * ~ < > = & _ | glyphs, and one it does not carry is rendered
@@ -647,11 +648,10 @@ local function renderCase(name, screen, setup, overrides)
   state:draw()
 
   T.eq(calls.draw, 0, name .. ": the modern renderer drew it")
-  local top, bottom = boundsFor(screen)
   local worst
   for _, mark in ipairs(marks) do
     if mark.x < LEFT or mark.x + mark.w > RIGHT
-        or mark.y < top or mark.y > bottom then
+        or mark.y < TOP or mark.y > BOTTOM then
       worst = worst or mark
     end
   end
@@ -755,6 +755,13 @@ do
   renderCase("options at the top", "options", function(s)
     s.currentMod = FAT
     s.optionRows = s:buildOptionRows(FAT, { schema[1] })
+  end)
+  -- a notice on a banded screen has one line it can take, and taking two of
+  -- them is how a notice and a caption ended up stacked in 0.2.0
+  renderCase("options with a notice", "options", function(s)
+    s.currentMod = FAT
+    s.optionRows = s:buildOptionRows(FAT, schema)
+    s.notice = "SAFE MODE ACTIVE"
   end)
 end
 

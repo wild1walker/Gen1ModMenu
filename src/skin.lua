@@ -60,11 +60,10 @@ local RULE_FROM, RULE_TO = 1, 18
 local CARD_H, CARDS = 4, 4
 local INDENT_X = 24        -- tile column 3, where a card's value line starts
 
--- The row the more-arrow and the position counter share, and the caption
--- line under it: exactly where OptionRows puts its own arrow and its CANCEL.
--- The per-mod options page keeps both, because its bottom line names the mod
--- being edited -- a footer saying where you are, not something you navigate.
-local MARGIN_ROW, CAPTION_ROW = 16, 17
+-- Where the game's own OPTION screen puts its more-arrow, which is the one
+-- screen this mod draws that has no bands: Skin.drawPlainRows is OptionRows'
+-- own four-box layout minus its CANCEL line.
+local MARGIN_ROW = 16
 
 -- The list is banded the way Gen1BillsBox bands its storage screen: a header
 -- box across the top, the rows under it, and an info box at the bottom
@@ -132,7 +131,14 @@ Skin.ROW_COUNT = ROW_COUNT
 -- the four 20x4 boxes vanilla draws.  Options scroll is 0-based here, the
 -- way ManagerState:goTo and OptionRows.draw both treat it; every other mode
 -- counts from 1.
-local OPT_TOP = 3
+-- The options page wears the same three bands as the list: the header names
+-- the mod being edited, the info band under the cards carries the help line,
+-- and the cards sit between them.  A header box costs three rows and an info
+-- box three more, so three cards fit where four did -- an option still needs
+-- both its lines, which is what a card is for and what a list row is not.
+local OPT_TOP, OPT_COUNT = 3, 3
+-- what the mod-options page shows at once, between its two bands
+Skin.OPT_COUNT = OPT_COUNT
 
 -- ------- drawing helpers
 --
@@ -320,7 +326,7 @@ local function newRenderer(mod, Rows, opt, Builtin)
   -- the four boxes vanilla draws, and four is what this draws too -- but the
   -- clamp is still owned here rather than inherited, because the two agreeing
   -- today is a coincidence and not a contract.
-  function R.optionWindow() return CARDS end
+  function R.optionWindow() return OPT_COUNT end
 
   -- ------- one row of a list
 
@@ -544,7 +550,7 @@ local function newRenderer(mod, Rows, opt, Builtin)
     local rows = state.optionRows or {}
     local scroll = state.scroll or 0
 
-    for slot = 1, CARDS do
+    for slot = 1, OPT_COUNT do
       local i = scroll + slot
       local row = rows[i]
       if not row then break end
@@ -553,29 +559,37 @@ local function newRenderer(mod, Rows, opt, Builtin)
         local ok, text = pcall(row.value, state.game)
         value = ok and tostring(text or "") or ""
       end
-      -- the dot marks a value the player has moved off the author's default;
+      -- CHANGED marks a value the player has moved off the author's default;
       -- it sits at the end of the value line, where there is room for it
-      drawCard(Font, Theme, (slot - 1) * CARD_H, row.label, value,
+      drawCard(Font, Theme, OPT_TOP + (slot - 1) * CARD_H, row.label, value,
                row.changed and S.line.changed or nil, i == state.cursor)
     end
 
-    if opt("help_line") then
-      local row = rows[state.cursor]
-      if row and row.help then
-        Font.draw(trimList(Font, row.help, (18 * 8) - LABEL_X - 8),
-                  LABEL_X, MARGIN_ROW * 8)
-      end
-    end
-    if #rows > scroll + CARDS then
-      Font.drawCode(Theme.moreArrow, 18 * 8, MARGIN_ROW * 8)
+    -- ------- the header band: whose options these are, and how far down them
+    if state.notice then
+      drawBand(Font, 0, state.notice, nil)
+    else
+      drawBand(Font, 0, (m and (m.name or m.id)) or S.line.options,
+               #rows > OPT_COUNT
+                 and (math.min(state.cursor or 1, #rows) .. "/" .. #rows)
+                 or nil)
     end
 
-    -- whose options these are, and how far down them you are
-    if not state.notice then
-      pair(Font, (m and (m.name or m.id)) or S.line.options,
-           #rows > CARDS and (math.min(state.cursor or 1, #rows) .. "/" .. #rows)
-             or nil, CAPTION_ROW)
+    -- ------- the info band: what the focused row accepts
+    --
+    -- Named after what the cursor is on, the same rule the list's band
+    -- follows.  With HELP LINE off that is the row's own label, which is
+    -- worth having: a label too long for its card is readable here.
+    local row = rows[state.cursor]
+    local text
+    if row then
+      if opt("help_line") and row.help then
+        text = trimList(Font, row.help, HEADER_RIGHT - LABEL_X)
+      else
+        text = row.label
+      end
     end
+    drawBand(Font, INFO_TY, text, nil)
   end
 
   -- ------- shared
@@ -628,17 +642,9 @@ local function newRenderer(mod, Rows, opt, Builtin)
       love.graphics.setColor(1, 1, 1, 1)
       love.graphics.rectangle("fill", 0, 0, 160, 144)
       love.graphics.setColor(0, 0, 0, 1)
-      if state.screen == "list" then
-        -- the list puts its own notice on its title row, which is the line
-        -- it has spare; row 17 is inside its fourth card
-        R.drawList(state)
-      else
-        R.drawOptions(state)
-        if state.notice then
-          Font.draw(fit(Font, state.notice, EDGE_X - LABEL_X), LABEL_X,
-                    CAPTION_ROW * 8)
-        end
-      end
+      -- Both banded screens put their own notice in their header band, the
+      -- one line either has spare: every other row of both is inside a box.
+      if state.screen == "list" then R.drawList(state) else R.drawOptions(state) end
       love.graphics.setColor(1, 1, 1, 1)
       -- the confirm/notice modal stays the engine's: it is a centred box with
       -- its own cursor index, and nothing about it is unreadable
