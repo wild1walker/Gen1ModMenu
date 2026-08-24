@@ -818,6 +818,45 @@ do
   T.eq(state.tab, 2, "and an ordinary step is an ordinary step")
 end
 
+-- The info band earns its place on the MODS tab, where it says the two
+-- things a row has no room for: the mod's category, and its state in words.
+-- On PROFILES and ERRORS the row already carries its whole text, so a band
+-- there could only read it back -- which is what it did, and what a fifth
+-- row is worth more than.
+do
+  T.eq(Skin.rowCountFor(1), 4, "the MODS tab keeps four rows and its band")
+  T.eq(Skin.rowCountFor(2), 5, "PROFILES spends the band's rows on a fifth row")
+  T.eq(Skin.rowCountFor(3), 5, "and so does ERRORS")
+end
+
+do -- nothing on the PROFILES tab is drawn twice
+  local marks = renderCase("profiles, no echo", "list", function(s)
+    s.tab = 2
+  end)
+  local counted = {}
+  for _, m in ipairs(marks) do
+    if not m.what:match("^code ") then
+      counted[m.what] = (counted[m.what] or 0) + 1
+    end
+  end
+  T.eq(counted["PROFILE 1"], 1,
+    "the focused row is not read back underneath itself")
+  T.check(counted["IMPORT.."] == 1,
+    "and the fifth row is on screen, where the band used to be")
+end
+
+do -- while the MODS tab still says what a row cannot
+  local marks = renderCase("mods, band says more", "list", function(s)
+    s.status.available = { { id = "x", name = "Gen1Dex", category = "UI",
+                             enabled = true, state = "blocked_dependency" } }
+  end, { sort = "name" })
+  local said = {}
+  for _, m in ipairs(marks) do said[m.what] = true end
+  T.check(said["UI"], "the band names the focused mod's category")
+  T.check(said["BLOCKED"], "and spells its state out in a word")
+  T.check(said["BLKD"], "while the row keeps the short mark")
+end
+
 -- ------- START and SELECT on the mod list
 
 local function listMenu(overrides)

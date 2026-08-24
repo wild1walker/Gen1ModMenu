@@ -4,6 +4,27 @@ All notable changes to Gen1ModMenu are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this mod uses
 [semantic versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.2] - 2026-08-24
+
+### Changed
+
+- **The info box under the rows is the `MODS` tab's alone now.** It earns its
+  place there by saying what a row has no room to say — the mod's category,
+  and its state in the word the detail screen uses rather than the four-glyph
+  mark the row carries. A profile name or an error line already *is* its whole
+  text, so a box under those rows could only read the selected row back. Those
+  two tabs spend the three rows on a **fifth row** instead: five names where
+  `MODS` shows four and a band.
+
+  0.7.0 added the echo deliberately, to keep the band from sitting empty on
+  the other two tabs. Keeping a band filled is not a reason to have one.
+
+### Fixed
+
+- **The list clamp was sized to a fixed four rows.** It now asks for the row
+  count of the tab being shown, so scrolling stops in the right place on a
+  five-row tab.
+
 ## [0.7.1] - 2026-08-24
 
 ### Changed
@@ -391,6 +412,7 @@ all four of these did.
   of the visit. On top of both, the engine's own `Screens.build` falls back
   to its builtin manager if this mod's screen cannot be constructed.
 
+[0.7.2]: https://github.com/wild1walker/Gen1ModMenu/releases/tag/v0.7.2
 [0.7.1]: https://github.com/wild1walker/Gen1ModMenu/releases/tag/v0.7.1
 [0.7.0]: https://github.com/wild1walker/Gen1ModMenu/releases/tag/v0.7.0
 [0.6.0]: https://github.com/wild1walker/Gen1ModMenu/releases/tag/v0.6.0

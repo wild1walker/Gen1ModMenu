@@ -72,9 +72,9 @@ The full word is always one A-press away, on the mod's own detail screen —
 is a mod's options page.
 
 The list is banded the way **Gen1BillsBox** bands its storage screen — a
-header box across the top, the rows under it, and an info box at the bottom
-naming what the cursor is on. Same geometry as that mod's own header: a
-full-width three-tile box, the text a column inside it, and a value
+header box across the top, the rows under it, and on `MODS` an info box at
+the bottom naming what the cursor is on. Same geometry as that mod's own
+header: a full-width three-tile box, the text a column inside it, and a value
 right-aligned to x=144.
 
 The header names the page you are on. Left and right move between `MODS`,
@@ -114,19 +114,21 @@ cards carries the help line for whichever row the cursor is on.
 +------------------+
 ```
 
-A list row is one thing — a name — so it is a single-line box and four fit
-between the bands. An option row is two things, a label and its value, so it
-keeps the four-tile card the game's own OPTION screen uses, and three of
-those fit.
+A list row is one thing — a name — so it is a single-line box. An option row
+is two things, a label and its value, so it keeps the four-tile card the
+game's own OPTION screen uses, and three of those fit between the bands.
 
-The info box always names what the cursor is on: the focused mod's category
-and its state in words on the list, the focused option's help line on an
-options page. Anything else names itself there, which is also how a label too
-long for its own line gets shown in full.
+**Only `MODS` wears the info box.** It earns its place there by saying what a
+row has no room to say: the focused mod's category, and its state in the word
+the detail screen uses rather than the four-glyph mark on the row. A profile
+name or an error line already *is* its whole text, so on `PROFILES` and
+`ERRORS` a box under the rows could only read it back. Those two tabs spend
+the three rows on a **fifth row** instead — five names where `MODS` shows
+four and a band.
 
-A mod's options page keeps its caption at the bottom instead, because that
-line names the mod being edited — it says where you are rather than being
-something you navigate — and it leaves room above it for the help line.
+On a mod's options page the info box carries the help line for whichever row
+the cursor is on; with `HELP LINE` off it names the focused row, which is
+worth having, because a label too long for its card is readable there.
 
 A row that carries no readable label — a profile saved without a name — draws
 as `(NO NAME)` rather than as an empty box.

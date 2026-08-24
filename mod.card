@@ -12,9 +12,13 @@ return {
       "the mod list and the per-mod OPTIONS page are both banded like "
         .. "Gen1BillsBox's storage screen: a header box "
         .. "naming the page (or the mod being edited) with the position "
-        .. "count beside it, the rows under it, and an info box at the "
-        .. "bottom naming what the cursor is on; left and right wrap "
+        .. "count beside it, and the rows under it; left and right wrap "
         .. "between the three pages",
+      "the info box under the rows belongs to MODS and to the OPTIONS page, "
+        .. "where it says what a row cannot -- the mod's category and its "
+        .. "state in words, or the focused option's help line; PROFILES and "
+        .. "ERRORS spend those three rows on a fifth row instead, because "
+        .. "their rows already carry their whole text",
       "MODS is drawn by this mod instead of the engine (STYLE: VANILLA hands "
         .. "every screen straight back)",
       "the mod list and the per-mod OPTIONS page are drawn as framed cards, "

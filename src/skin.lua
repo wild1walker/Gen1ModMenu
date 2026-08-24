@@ -76,11 +76,22 @@ local INFO_TY = 15                -- the info box's top, as its INFO_TY
 local HEADER_RIGHT = 144          -- where a right-aligned header value ends
 
 -- A list row is one thing -- a name -- so it is a three-tile box with a
--- single line in it, and four of those fill the twelve rows between the two
--- bands.  An OPTION row is two things, a label and its value, which is why
--- the options page keeps the four-tile cards the game's own OPTION screen
--- uses and this does not.
-local ROW_TOP, ROW_H, ROW_COUNT = 3, 3, 4
+-- single line in it.  An OPTION row is two things, a label and its value,
+-- which is why the options page keeps the four-tile cards the game's own
+-- OPTION screen uses and this does not.
+--
+-- How many fit depends on whether the tab has an info band under them, and
+-- only the MODS tab does.  A band earns its place there by saying something
+-- the row cannot -- the mod's category and its state in words.  On PROFILES
+-- and ERRORS the row already IS the whole text, so a band could only repeat
+-- it back, and the row it would cost is worth more than the echo.
+local ROW_TOP, ROW_H = 3, 3
+local ROWS_WITH_BAND, ROWS_WITHOUT = 4, 5
+
+-- The MODS tab is tab 1; the other two run their rows to the bottom.
+function Skin.rowCountFor(tab)
+  return tab == 1 and ROWS_WITH_BAND or ROWS_WITHOUT
+end
 
 -- Every fixed word this screen says, in one place.
 --
@@ -123,8 +134,6 @@ local S = Skin.STRINGS
 local PAGES = S.line.pages
 
 Skin.CARDS = CARDS
--- how many rows the LIST shows; the options page still shows CARDS
-Skin.ROW_COUNT = ROW_COUNT
 
 -- The options page sets its own window, so it also has to do its own clamp
 -- (see clampOptionScroll): the engine's is OptionRows.clampScroll, sized for
@@ -352,8 +361,11 @@ local function newRenderer(mod, Rows, opt, Builtin)
     local rows = state:rowsForScreen()
     local scroll = math.max(1, state.scroll or 1)
 
+    local banded = state.tab == 1
+    local count = Skin.rowCountFor(state.tab)
+
     local focused
-    for slot = 1, ROW_COUNT do
+    for slot = 1, count do
       local i = scroll + slot - 1
       local row = rows[i]
       if not row then break end
@@ -388,23 +400,19 @@ local function newRenderer(mod, Rows, opt, Builtin)
                total > 0 and (math.max(ordinal, 1) .. "/" .. total) or nil)
     end
 
-    -- ------- the info band
+    -- ------- the info band, on the MODS tab only
     --
     -- Gen1BillsBox spends its bottom three rows on "one line naming what the
-    -- cursor is on", and so does this: the focused mod's category, and its
-    -- state in the word the detail screen uses rather than the four-glyph
-    -- mark the row carries.
-    local left, right
-    if focused and focused.mod then
-      left = focused.category
-      right = S.states[focused.state or "ON"]
-    elseif focused then
-      -- Anything that is not a mod names itself here instead, which is what
-      -- keeps the band from sitting empty on the other two tabs -- and shows
-      -- a label in full when the row above had to cut it.
-      left = focused.label
+    -- cursor is on".  Here that is the focused mod's category and its state
+    -- in the word the detail screen uses, rather than the four-glyph mark the
+    -- row carries -- both things the row has no room to say.  The other two
+    -- tabs have rows that already carry their whole text, so they spend
+    -- those three rows on a fifth row instead.
+    if banded and focused and focused.mod then
+      drawBand(Font, INFO_TY, focused.category, S.states[focused.state or "ON"])
+    elseif banded then
+      drawBand(Font, INFO_TY, nil, nil)
     end
-    drawBand(Font, INFO_TY, left, right)
   end
 
   -- ------- detail
