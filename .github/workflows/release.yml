@@ -33,6 +33,8 @@ on:
     paths-ignore:
       - '.github/**'
       - '**.md'
+      # page furniture: docs/ is README artwork, not mod code
+      - 'docs/**'
   workflow_dispatch:
     inputs:
       version:
