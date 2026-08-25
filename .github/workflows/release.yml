@@ -35,6 +35,10 @@ on:
       - '**.md'
       # page furniture: docs/ is README artwork, not mod code
       - 'docs/**'
+      # sharing metadata for the manager's detail pane; the loader never
+      # reads it, so editing a credit is not a code change and must not
+      # start a release run
+      - 'mod.card'
   workflow_dispatch:
     inputs:
       version:
