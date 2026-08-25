@@ -60,10 +60,10 @@ Options.schema = {
 
   -- ------- the menus outside the manager
 
-  -- The engine's own row here is labelled MODS and is already wired to the
-  -- manager, so this renames it rather than adding a second way in.
-  { key = "start_row", type = "toggle", label = "START ROW", default = true,
-    visible_if = { key = "presentation", equals = "modern" } },
+  -- START ROW was here through 0.7.2, switching the START menu's row between
+  -- MODS and MOD MENU.  The row is the engine's own and reads MODS again, so
+  -- there is nothing left for a toggle to choose between.  A stored value is
+  -- ignored; there is nothing to migrate.
 
   -- CANCEL on the game's OPTION screen.  B and START already leave that
   -- menu, so the row is a second exit rather than the only one -- but it is

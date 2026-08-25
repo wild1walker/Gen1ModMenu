@@ -4,6 +4,33 @@ All notable changes to Gen1ModMenu are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this mod uses
 [semantic versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] - 2026-08-25
+
+### Removed
+
+- **The START menu's row is the engine's again, and reads `MODS`.** 0.2.0
+  renamed it to `MOD MENU`. `MODS` is what the rest of the game calls them
+  and what the header of the screen it opens says, so the rename was a second
+  name for one thing — and renaming a row back to the label the engine
+  already wrote is not a rename, it is a hook doing nothing. The wrapper on
+  `ui.start_menu.items` is gone rather than made a no-op, so a translation of
+  `MODS` now reaches the START menu the way it always could.
+
+- **`START ROW` goes with it.** It chose between two labels and there is only
+  one now. A stored value is ignored; there is nothing to migrate.
+
+  The fallback that appended a row when there was none to rename goes too. It
+  guarded against a build gating the engine's row differently, and the
+  engine's gate is "at least one mod discovered" — a condition this mod
+  satisfies by existing.
+
+### Changed
+
+- The suite asserts the START menu is untouched rather than assuming it: that
+  `Menus.install` wraps nothing on `ui.start_menu.items`, and that a menu
+  handed through it still reads `MODS`. A rename is a one-line thing to add
+  back by accident.
+
 ## [0.7.2] - 2026-08-24
 
 ### Changed
@@ -412,6 +439,7 @@ all four of these did.
   of the visit. On top of both, the engine's own `Screens.build` falls back
   to its builtin manager if this mod's screen cannot be constructed.
 
+[0.8.0]: https://github.com/wild1walker/Gen1ModMenu/releases/tag/v0.8.0
 [0.7.2]: https://github.com/wild1walker/Gen1ModMenu/releases/tag/v0.7.2
 [0.7.1]: https://github.com/wild1walker/Gen1ModMenu/releases/tag/v0.7.1
 [0.7.0]: https://github.com/wild1walker/Gen1ModMenu/releases/tag/v0.7.0

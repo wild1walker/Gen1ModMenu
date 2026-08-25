@@ -40,8 +40,6 @@ return {
         .. "SELECT applies staged changes, which is what START used to do",
       "a row with no readable label -- a profile saved without a name -- "
         .. "reads (NO NAME) rather than drawing an empty card",
-      "the START menu's MODS row is relabelled MOD MENU (the engine's own "
-        .. "row, renamed rather than duplicated)",
       "CANCEL is dropped from the game's own OPTION screen on Gen 1; B and "
         .. "START already leave that menu, so it was a second exit rather "
         .. "than the only one",

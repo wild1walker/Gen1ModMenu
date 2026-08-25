@@ -1,65 +1,20 @@
--- The two edits outside the mod manager itself: the START menu's row, and
--- the CANCEL line on the game's own OPTION screen.
+-- The one edit outside the mod manager itself: the CANCEL line on the game's
+-- own OPTION screen.
 --
--- Both are gated on STYLE, so putting that row back on VANILLA puts the
--- whole mod back -- these included -- rather than only its drawing.
+-- It is gated on STYLE, so putting that row back on VANILLA puts the whole
+-- mod back -- this included -- rather than only its drawing.
+--
+-- The START menu's row is not touched.  src/ui/StartMenu.lua already puts
+-- one there, labelled MODS and wired to the manager, and 0.2.0 through 0.7.2
+-- renamed it to MOD MENU.  MODS is what the rest of the game calls them and
+-- what the header of the screen it opens says, so the rename was a second
+-- name for one thing.  The engine's row stands as the engine wrote it, and
+-- a translation of MODS now reaches the START menu the way it always could.
 
 local Menus = {}
 
--- Not through Strings: there is no catalog key for it, and Strings.lookup
--- answers with the source when a translation has nothing to say, so passing
--- it through would buy nothing and read as though it might.  A translation
--- mod that wants this word can rewrite the row like any other label.
-local START_LABEL = "MOD MENU"
-
--- src/ui/OptionRows.lua VISIBLE, which is also this mod's card count.
 local function active(opt, key)
   return opt("presentation") == "modern" and opt(key)
-end
-
--- ------- the START menu
---
--- The engine already puts a row here, gated on at least one discovered mod
--- (src/ui/StartMenu.lua) -- a condition this mod satisfies by existing -- so
--- the work is renaming that row rather than adding a second one beside it.
--- Matched on the label the engine would have produced, so a translation mod
--- that rewrote MODS is still recognised.
---
--- Wrapped at the default priority, not outermost: Gen1MenuManager takes
--- priority 1000 to arrange this list after everyone has finished appending
--- to it, and a row renamed here is a row it can then move, hide or leave
--- alone like any other.
-function Menus.installStartRow(mod, opt)
-  mod.hooks:wrap("ui.start_menu.items", function(nextFn, game, items)
-    local built = nextFn(game, items)
-    if type(built) ~= "table" then return built end
-    if not active(opt, "start_row") then return built end
-
-    local ok, err = pcall(function()
-      local vanilla = "MODS"
-      local got, Strings = pcall(require, "src.core.Strings")
-      if got and Strings then
-        local said, text = pcall(Strings, "MODS")
-        if said and type(text) == "string" then vanilla = text end
-      end
-      for _, row in ipairs(built) do
-        if row.label == vanilla then
-          row.label = START_LABEL
-          return
-        end
-      end
-      -- No row to rename: a build that gates the engine's own differently
-      -- should still have a way in from here.
-      built[#built + 1] = {
-        label = START_LABEL,
-        onSelect = function() mod.ui.push(game, "ManagerState") end,
-      }
-    end)
-    if not ok then
-      mod.log:warn("the START menu row was left alone: %s", tostring(err))
-    end
-    return built
-  end)
 end
 
 -- ------- the game's OPTION screen
@@ -134,7 +89,6 @@ function Menus.installOptionsScreen(mod, Skin, opt)
 end
 
 function Menus.install(mod, Skin, opt)
-  Menus.installStartRow(mod, opt)
   return Menus.installOptionsScreen(mod, Skin, opt)
 end
 

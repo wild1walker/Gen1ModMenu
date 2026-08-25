@@ -981,44 +981,25 @@ local function hookBus()
   }
 end
 
-local function startMenu(overrides)
+-- The START menu is left entirely alone: its row is the engine's own, it
+-- reads MODS, and this mod no longer wraps the hook that builds it.  Asserted
+-- rather than assumed, because a rename is a one-line thing to add back.
+do
   local bus = hookBus()
-  Menus.installStartRow({ hooks = bus, ui = {}, log = modStub.log },
-                        reader(overrides))
-  return function(items)
-    return bus.call("ui.start_menu.items", function(_, list) return list end,
-                    {}, items)
-  end
-end
-
-do -- the engine's own row is renamed, not duplicated
-  local run = startMenu()
-  local out = run({ { label = "POKEDEX" }, { label = "MODS" },
-                    { label = "QUIT" } })
-  T.eq(#out, 3, "no second row is added beside the engine's")
-  T.eq(out[2].label, "MOD MENU", "the engine's MODS row is the one renamed")
-  T.eq(out[1].label, "POKEDEX", "and nothing else is touched")
-end
-
-do -- a build with no row of its own still gets a way in from here
-  local out = startMenu()({ { label = "POKEDEX" }, { label = "QUIT" } })
-  T.eq(#out, 3, "a row is appended when there is none to rename")
-  T.eq(out[3].label, "MOD MENU", "and it carries the same label")
-  T.check(type(out[3].onSelect) == "function", "and it opens something")
-end
-
-do -- both switches leave the menu exactly as the engine built it
-  local off = startMenu({ start_row = false })({ { label = "MODS" } })
-  T.eq(off[1].label, "MODS", "START ROW off leaves the engine's label")
-  local vanilla = startMenu({ presentation = "vanilla" })({ { label = "MODS" } })
-  T.eq(vanilla[1].label, "MODS", "and so does STYLE: VANILLA")
-end
-
-do -- a hook that is handed something other than a list hands it straight back
-  local bus = hookBus()
-  Menus.installStartRow({ hooks = bus, ui = {}, log = modStub.log }, reader())
-  local out = bus.call("ui.start_menu.items", function() return "not a list" end)
-  T.eq(out, "not a list", "a non-list result is passed through untouched")
+  local optionsMod = {
+    ui = {}, log = modStub.log,
+    content = { screens = { register = function() end } },
+  }
+  optionsMod.hooks = bus
+  Menus.install(optionsMod, Skin, reader())
+  T.check(Menus.installStartRow == nil,
+          "there is no START menu installer left to call")
+  local items = { { label = "POKEDEX" }, { label = "MODS" },
+                  { label = "QUIT" } }
+  local out = bus.call("ui.start_menu.items",
+                       function(_, list) return list end, {}, items)
+  T.eq(#out, 3, "no row is added to the START menu")
+  T.eq(out[2].label, "MODS", "and the engine's own row keeps its label")
 end
 
 -- The OPTION screen's cursor, with CANCEL no longer drawn.  The engine's own

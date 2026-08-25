@@ -195,32 +195,32 @@ is showing.
 
 ## Outside the manager
 
-Two smaller edits, both switched off by `STYLE: VANILLA` along with
-everything else.
+One smaller edit, switched off by `STYLE: VANILLA` along with everything
+else: **`CANCEL` is gone from the game's own OPTION screen.**
 
-- **The START menu row reads `MOD MENU`.** The engine already puts a row
-  there, gated on at least one mod being installed, and labels it `MODS` —
-  this renames that row rather than adding a second one beside it. It is
-  matched on the label the engine would have produced, so a translation mod
-  that rewrote `MODS` is still recognised, and it is renamed at the default
-  hook priority so Gen1MenuManager can still move, hide or pin it like any
-  other row.
-- **`CANCEL` is gone from the game's own OPTION screen.** It was never one of
-  the rows — the engine appends it after the `ui.options.rows` hook and draws
-  it as the fixed bottom line, which is what stops a mod from orphaning the
-  exit. It is also not the only exit: **B and START both leave that menu**,
-  with the same sound and the same pop. So the line goes back to the screen.
+It was never one of the rows — the engine appends it after the
+`ui.options.rows` hook and draws it as the fixed bottom line, which is what
+stops a mod from orphaning the exit. It is also not the only exit: **B and
+START both leave that menu**, with the same sound and the same pop. So the
+line goes back to the screen.
 
-  The wrapper that does this never touches input. The engine's own update
-  runs first and in full every frame; all that happens afterwards is that a
-  cursor parked on the row that is no longer drawn gets moved onto one that
-  is. A bug in there can misplace the cursor — it cannot take away the way
-  out.
+The wrapper that does this never touches input. The engine's own update runs
+first and in full every frame; all that happens afterwards is that a cursor
+parked on the row that is no longer drawn gets moved onto one that is. A bug
+in there can misplace the cursor — it cannot take away the way out.
 
-  **Gen 1 only.** Gold's options screen is a different screen
-  (`Gen2OptionsMenu`) with a different layout — one 18×16 box rather than
-  four 20×4 ones — so it is left alone rather than have Red's chrome painted
-  over it.
+**Gen 1 only.** Gold's options screen is a different screen
+(`Gen2OptionsMenu`) with a different layout — one 18×16 box rather than four
+20×4 ones — so it is left alone rather than have Red's chrome painted over
+it.
+
+The **START menu is left alone**. The engine already puts a row there, gated
+on at least one mod being installed, labelled `MODS` and wired to this
+screen. 0.2.0 through 0.7.2 renamed it to `MOD MENU`; `MODS` is what the rest
+of the game calls them and what the header of the screen it opens says, so
+the rename was a second name for one thing. The row is the engine's again, in
+the engine's words — which also means a translation of `MODS` reaches the
+START menu the way it always could.
 
 ## Options
 
@@ -236,7 +236,6 @@ All under **MODS → Gen1ModMenu → OPTIONS**.
 - **WITH OPTIONS** — show only the mods that have something to configure.
 - **HELP LINE** — what the info box under a mod's options shows: the focused
   row's help line, or its full label when off.
-- **START ROW** — label the START menu's row `MOD MENU` instead of `MODS`.
 - **HIDE CANCEL** — drop `CANCEL` from the game's own OPTION screen.
 - **KEEP CURSOR** — reopen the manager on the row you left it on.
 
