@@ -351,6 +351,14 @@ archive root, and publishes a GitHub Release with the zip and a
 If none of the three apply, the run stops after CI and publishes nothing.
 **A release is always a deliberate version bump.**
 
+## Credits
+
+By **Wild**.
+
+Built on [Pokemon Gen1Recomp](https://github.com/bryanthaboi/gen1recomp) -- `src/mods/ManagerState.lua` and the `Data.screens` registry
+this mod reaches it through are the engine's, and the OPTION-screen idiom it
+redraws the manager in is the cartridge's.
+
 ## Licence
 
 MIT. See [LICENSE](LICENSE).
