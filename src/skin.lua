@@ -65,6 +65,12 @@ local INDENT_X = 24        -- tile column 3, where a card's value line starts
 -- own four-box layout minus its CANCEL line.
 local MARGIN_ROW = 16
 
+-- ...and the column it puts it in: 18 is the last interior column of a
+-- full-width box, so an arrow there sits in the frame's bottom-right corner
+-- cell rather than below the frame, which is where OptionRows has a spare
+-- row and the list does not.
+local MORE_X = 18 * 8
+
 -- The list is banded the way Gen1BillsBox bands its storage screen: a header
 -- box across the top, the rows under it, and an info box at the bottom
 -- naming what the cursor is on.  Its own header is the geometry copied here
@@ -281,16 +287,21 @@ end
 -- full-width three-tile box, the text a column inside it, and a value
 -- right-aligned to x=144.  Used for both bands, since the info box at the
 -- bottom is the same shape.
-local function drawBand(Font, top, left, right)
+--
+-- `reserve` gives the more-arrow the column HEADER_RIGHT already left as
+-- padding, and a column of clearance before it, so the arrow does not sit
+-- flush against the word beside it.
+local function drawBand(Font, top, left, right, reserve)
   love.graphics.setColor(0, 0, 0, 1)
   Font.drawBox(0, top, COLS, HEADER_TH)
   love.graphics.setColor(0, 0, 0, 1)
   -- the gap is owed to a value, so a line without one keeps that glyph:
   -- "SAVE CURRENT AS.." is 17 of the 17 a row holds, and lost its last dot
   -- to a gap it was not sharing with anything
-  local stop, gap = HEADER_RIGHT, 0
+  local edge = reserve and (HEADER_RIGHT - 8) or HEADER_RIGHT
+  local stop, gap = edge, 0
   if right and right ~= "" then
-    stop = rightAt(Font, right, HEADER_RIGHT, (top + 1) * 8)
+    stop = rightAt(Font, right, edge, (top + 1) * 8)
     gap = 8
   end
   if left and left ~= "" then
@@ -301,11 +312,14 @@ end
 -- One list row: a three-tile box with the name on its single line, the
 -- cursor in the margin beside it, and the status right-aligned against the
 -- far edge.  A healthy mod has no status, so most names get the whole line.
-local function drawRowBox(Font, Theme, top, label, mark, focused)
+--
+-- `reserve` holds column 18 back for the more-arrow, which is drawn into
+-- this box rather than under it.
+local function drawRowBox(Font, Theme, top, label, mark, focused, reserve)
   love.graphics.setColor(0, 0, 0, 1)
   Font.drawBox(0, top, COLS, ROW_H)
   love.graphics.setColor(0, 0, 0, 1)
-  local stop, gap = EDGE_X, 0
+  local stop, gap = reserve and MORE_X or EDGE_X, 0
   if mark and mark ~= "" then
     stop = rightAt(Font, mark, EDGE_X, (top + 1) * 8)
     gap = 8
@@ -364,6 +378,15 @@ local function newRenderer(mod, Rows, opt, Builtin)
     local banded = state.tab == 1
     local count = Skin.rowCountFor(state.tab)
 
+    -- The count in the header says where you are in the list; an arrow says
+    -- there is more of it below, which is a different question and the one
+    -- a player asks before pressing down.  It goes in the bottom-right
+    -- corner cell of whatever occupies the bottom of the screen -- the info
+    -- band on MODS, the fifth row on the other two -- so it is in the same
+    -- place on every tab.  Both of those interior lines are row 16.
+    local more = #rows > scroll + count - 1
+    local moreY = (banded and INFO_TY or ROW_TOP + (count - 1) * ROW_H) + 1
+
     local focused
     for slot = 1, count do
       local i = scroll + slot - 1
@@ -377,7 +400,8 @@ local function newRenderer(mod, Rows, opt, Builtin)
         label = S.line.unnamed
       end
       drawRowBox(Font, Theme, ROW_TOP + (slot - 1) * ROW_H, label,
-                 row.state ~= "ON" and row.state or nil, i == state.cursor)
+                 row.state ~= "ON" and row.state or nil, i == state.cursor,
+                 more and not banded and slot == count)
     end
 
     -- ------- the header band
@@ -409,10 +433,17 @@ local function newRenderer(mod, Rows, opt, Builtin)
     -- tabs have rows that already carry their whole text, so they spend
     -- those three rows on a fifth row instead.
     if banded and focused and focused.mod then
-      drawBand(Font, INFO_TY, focused.category, S.states[focused.state or "ON"])
+      drawBand(Font, INFO_TY, focused.category, S.states[focused.state or "ON"],
+               more)
     elseif banded then
-      drawBand(Font, INFO_TY, nil, nil)
+      drawBand(Font, INFO_TY, nil, nil, more)
     end
+
+    -- Last, so it is never the thing a band paints over.  The band's own
+    -- value stops at HEADER_RIGHT, one column short of the border, which is
+    -- the padding this arrow now occupies; a row yields that column through
+    -- drawRowBox's `reserve`.
+    if more then Font.drawCode(Theme.moreArrow, MORE_X, moreY * 8) end
   end
 
   -- ------- detail
@@ -588,16 +619,23 @@ local function newRenderer(mod, Rows, opt, Builtin)
     -- Named after what the cursor is on, the same rule the list's band
     -- follows.  With HELP LINE off that is the row's own label, which is
     -- worth having: a label too long for its card is readable here.
+    local more = #rows > scroll + OPT_COUNT
     local row = rows[state.cursor]
     local text
     if row then
       if opt("help_line") and row.help then
-        text = trimList(Font, row.help, HEADER_RIGHT - LABEL_X)
+        -- the same budget drawBand is about to apply, so whole choices come
+        -- off the end here rather than fit() cutting one in half in there
+        text = trimList(Font, row.help,
+                        (more and HEADER_RIGHT - 8 or HEADER_RIGHT) - LABEL_X)
       else
         text = row.label
       end
     end
-    drawBand(Font, INFO_TY, text, nil)
+    drawBand(Font, INFO_TY, text, nil, more)
+    -- Same corner cell as the list's, for the same reason: the count says
+    -- where you are, the arrow says there is more below it.
+    if more then Font.drawCode(Theme.moreArrow, MORE_X, (INFO_TY + 1) * 8) end
   end
 
   -- ------- shared

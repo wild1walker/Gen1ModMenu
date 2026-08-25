@@ -118,6 +118,14 @@ A list row is one thing — a name — so it is a single-line box. An option row
 is two things, a label and its value, so it keeps the four-tile card the
 game's own OPTION screen uses, and three of those fit between the bands.
 
+A **more-arrow** sits in the bottom-right interior cell — column 18, row 16 —
+whenever there is more list below the screen, in the same place on all three
+tabs and on a mod's options page. The count in the header says where you are;
+the arrow says there is further to go, which is the question asked before
+pressing down. The game's own `OPTION` screen puts its arrow on a spare row
+under the last box; there is no spare row here, so this one is inside the
+frame, in the column `HEADER_RIGHT` already left as padding.
+
 **Only `MODS` wears the info box.** It earns its place there by saying what a
 row has no room to say: the focused mod's category, and its state in the word
 the detail screen uses rather than the four-glyph mark on the row. A profile

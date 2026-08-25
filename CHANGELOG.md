@@ -4,6 +4,36 @@ All notable changes to Gen1ModMenu are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this mod uses
 [semantic versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.1] - 2026-08-25
+
+### Added
+
+- **A more-arrow in the bottom-right corner when the list runs on.** The
+  position count in the header says *where you are*; whether there is more
+  below is a different question, and it is the one asked before pressing
+  down. 0.1.1 dropped the arrow on the grounds that the count answered both.
+  It does not.
+
+  It sits in the bottom-right interior cell — column 18, row 16 — on all
+  three tabs and on a mod's options page, so it is in the same place
+  wherever you are. `MODS` and the options page have the info box there and
+  spend the column `HEADER_RIGHT` already left as padding; `PROFILES` and
+  `ERRORS` have their fifth row there, which yields the column while the
+  arrow is up and takes it back when it is not.
+
+  The game's own `OPTION` screen puts its arrow on a spare row under the last
+  box. There is no spare row here, which is why this one is inside the frame
+  rather than below it.
+
+### Fixed
+
+- **The stand-in for the `PROFILES` tab ignored the fixture that fed it**, so
+  a case setting up twelve profiles rendered the same two the default builds.
+  The first version of the arrow tests passed against it by accident — the
+  default list is six rows, which is already one more than fits. That is the
+  fifth defect this session traceable to the fake `ManagerState` being
+  thinner than the real one.
+
 ## [0.8.0] - 2026-08-25
 
 ### Removed
@@ -439,6 +469,7 @@ all four of these did.
   of the visit. On top of both, the engine's own `Screens.build` falls back
   to its builtin manager if this mod's screen cannot be constructed.
 
+[0.8.1]: https://github.com/wild1walker/Gen1ModMenu/releases/tag/v0.8.1
 [0.8.0]: https://github.com/wild1walker/Gen1ModMenu/releases/tag/v0.8.0
 [0.7.2]: https://github.com/wild1walker/Gen1ModMenu/releases/tag/v0.7.2
 [0.7.1]: https://github.com/wild1walker/Gen1ModMenu/releases/tag/v0.7.1

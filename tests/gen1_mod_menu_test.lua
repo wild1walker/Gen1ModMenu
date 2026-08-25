@@ -605,13 +605,24 @@ local function renderCase(name, screen, setup, overrides)
         -- what ManagerState:profileRows builds: a row per saved profile,
         -- labelled p.name -- including one saved without a name, which is
         -- the row that came out as an empty card -- then the actions
-        return { { profile = { name = "PROFILE 1" }, label = "PROFILE 1",
-                   glyph = "!" },
-                 { profile = { name = "" }, label = "" },
-                 { saveAs = true, label = "SAVE CURRENT AS.." },
-                 { exportProfile = true, label = "EXPORT.." },
-                 { importProfile = true, label = "IMPORT.." },
-                 { adhoc = true, label = "[AD-HOC] (LIVE)" } }
+        local out = {}
+        -- self.profiles when a case sets it, so a fixture can make this tab
+        -- long enough to scroll; the default pair otherwise, one of them the
+        -- unnamed profile that came out as an empty card
+        if self.profiles then
+          for i, p in ipairs(self.profiles) do
+            out[i] = { profile = p, label = p.name, glyph = "!" }
+          end
+        else
+          out[1] = { profile = { name = "PROFILE 1" }, label = "PROFILE 1",
+                     glyph = "!" }
+          out[2] = { profile = { name = "" }, label = "" }
+        end
+        out[#out + 1] = { saveAs = true, label = "SAVE CURRENT AS.." }
+        out[#out + 1] = { exportProfile = true, label = "EXPORT.." }
+        out[#out + 1] = { importProfile = true, label = "IMPORT.." }
+        out[#out + 1] = { adhoc = true, label = "[AD-HOC] (LIVE)" }
+        return out
       end
       return self:errorRows(nil)
     elseif self.screen == "detail" then
@@ -696,6 +707,94 @@ renderCase("list/profiles", "list", function(s) s.tab = 2 end)
 renderCase("list/errors", "list", function(s) s.tab = 3 end)
 renderCase("list sorted by name", "list", nil, { sort = "name" })
 renderCase("list with a notice", "list", function(s) s.notice = "SAFE MODE ACTIVE" end)
+
+-- ------- the more-arrow
+--
+-- The count in the header says where you are; the arrow says there is more
+-- below, which is the question asked before pressing down.  It lives in the
+-- bottom-right interior cell -- column 18, row 16 -- on all three tabs and on
+-- an options page, so the fixtures below are about it being there when the
+-- list runs on, gone when it does not, and never sharing its cell.
+local ARROW_X, ARROW_Y = 18 * 8, 16 * 8
+
+local function arrowIn(marks)
+  local code = "code " .. tostring(RealTheme.moreArrow)
+  for _, m in ipairs(marks) do
+    if m.what == code and m.x == ARROW_X and m.y == ARROW_Y then return true end
+  end
+  return false
+end
+
+local function manyMods(n)
+  local out = {}
+  for i = 1, n do
+    out[i] = { id = "m" .. i, name = "Gen1LongishModName" .. i,
+               category = "UI", enabled = true }
+  end
+  return out
+end
+
+do -- a list that runs on says so, on every tab
+  T.check(arrowIn(renderCase("list with more below", "list", function(s)
+    s.status.available = manyMods(12)
+  end)), "the MODS tab draws the arrow when the list runs past the screen")
+
+  T.check(arrowIn(renderCase("profiles with more below", "list", function(s)
+    s.tab = 2
+    s.profiles = {}
+    for i = 1, 12 do s.profiles[i] = { name = "PROFILE " .. i } end
+  end)), "and so does the PROFILES tab, whose fifth row it shares a line with")
+end
+
+do -- and a list that does not, does not
+  T.check(not arrowIn(renderCase("list with nothing below", "list",
+    function(s) s.status.available = manyMods(2) end)),
+    "a list that fits draws no arrow")
+
+  local tail = renderCase("list scrolled to the end", "list", function(s)
+    s.status.available = manyMods(6)
+    s.cursor, s.scroll = 6, 3
+  end)
+  T.check(not arrowIn(tail), "and neither does one scrolled to its last row")
+end
+
+do -- the arrow's cell is held back rather than painted over
+  -- A label wide enough to want that cell is the whole point of the fixture:
+  -- a bottom row that yields nothing is not a test of a row yielding a
+  -- column.  So this measures the label rather than merely finding one, and
+  -- pins that it is the row which gives way, the same way a mod name gives
+  -- way to its mark.
+  local marks = renderCase("long bottom row under the arrow", "list",
+    function(s)
+      s.tab = 2
+      s.profiles = {}
+      for i = 1, 12 do
+        s.profiles[i] = { name = "A LONG PROFILE NAME " .. i }
+      end
+    end)
+
+  -- Every visible row here carries the same shape of label, so the rows above
+  -- are the control: they show what one of these is allowed to reach when it
+  -- is not sharing its line with the arrow.
+  local onArrow, elsewhere = 0, 0
+  for _, m in ipairs(marks) do
+    if not m.what:match("^code ") then
+      if m.y == ARROW_Y then
+        onArrow = math.max(onArrow, m.x + m.w)
+      elseif m.what:match("^A LONG PROFILE") then
+        elsewhere = math.max(elsewhere, m.x + m.w)
+      end
+    end
+  end
+
+  T.check(arrowIn(marks), "a long bottom row still gets the arrow")
+  T.check(onArrow > 0, "and the row really does carry a label")
+  T.check(onArrow <= ARROW_X, "which stops at the arrow's column rather than "
+    .. "running under it")
+  T.check(elsewhere > ARROW_X,
+          "while the same label a row up runs past that column, so the "
+          .. "bottom row gave the column up rather than never wanting it")
+end
 
 renderCase("list of one long name", "list", function(s)
   s.status.available = { { id = "x", name = "AnAbsurdlyLongModNameHere",

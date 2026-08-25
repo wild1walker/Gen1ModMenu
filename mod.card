@@ -26,6 +26,10 @@ return {
         .. "and an option value are each shown in full on a line of their own",
       "the mod list can be sorted by name, enabled state or problems, and "
         .. "filtered down to the mods that have options",
+      "a more-arrow in the bottom-right interior cell whenever the list runs "
+        .. "past the screen, on every tab and on a mod's OPTIONS page; the "
+        .. "game's own OPTION screen has a spare row under its last box for "
+        .. "one and these screens do not, so it sits inside the frame",
       "a mod that is enabled and running carries no mark; the status is for "
         .. "the exceptions (OFF, STGD, ERR, BLKD, SKIP), and shares the "
         .. "card's second line with the mod's category",
