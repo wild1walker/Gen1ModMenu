@@ -1,7 +1,7 @@
 {
   "id": "gen1_mod_menu",
   "name": "Gen1ModMenu",
-  "version": "0.8.1",
+  "version": "0.8.2",
   "api": 2,
   "entry": "main.lua",
   "profile": "content",

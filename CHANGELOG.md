@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.8.2
+
+**The OPTION screen showed the wrong rows.** Fixed. If you are on `STYLE =
+MODERN` with `HIDE CANCEL` on -- both defaults -- every row on that screen was
+somebody else's: the arrow on `RULESET` while the press edited whatever sat at
+that index, and `MODS` nowhere to be found.
+
+The engine grouped the OPTION screen (gen1recomp `3e4772ab`). It now keeps two
+lists: `rows`, the flat one the `ui.options.rows` hook builds, and `view`, the
+one on screen, where a group's members are replaced by a single opener --
+`SPEED`, `VIDEO`, `GRAPHICS`, `AUDIO` and the rest. The cursor indexes `view`,
+and the engine's own draw takes `self.view or self.rows`.
+
+This mod's decoration -- the one that stops `CANCEL` being drawn -- read
+`rows`. So it painted the flat list under a cursor counting the grouped one,
+and the two disagreed from the first row down. `MODS` is ninth in the view and
+thirtieth in the flat list, which is why it looked like it had been removed: it
+was drawn far below where anyone would scroll, and the cursor never pointed at
+what the screen said.
+
+Both halves now read `self.view or self.rows`, which is what the engine draws
+and what the cursor counts. The cursor clamp was measuring the flat list too --
+an index into a 17-row view is never past a 34-row list, so it never fired.
+
+Three checks pin it, and all three fail without the fix.
+
 All notable changes to Gen1ModMenu are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this mod uses
 [semantic versioning](https://semver.org/spec/v2.0.0.html).

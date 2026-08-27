@@ -1159,6 +1159,66 @@ do
   T.eq(state.index, 3, "and an ordinary move is left alone")
 end
 
+-- The same screen once the engine groups it.  src/ui/OptionsMenu.lua keeps two
+-- lists: `rows`, the flat one the ui.options.rows hook built, and `view`, the
+-- one on screen, where a group of members is replaced by a single opener.  The
+-- cursor indexes `view`, and the engine's own draw takes `self.view or
+-- self.rows` -- so a decoration reading `rows` draws one list under a cursor
+-- counting the other, and MODS (ninth in the view) hides thirtieth in a list
+-- nobody is looking at.
+do
+  local registered
+  local optionsMod = {
+    ui = {}, log = modStub.log,
+    content = { screens = { register = function(_, id, record)
+      registered = { id = id, record = record }
+    end } },
+  }
+  -- a Skin that records what it was asked to draw rather than drawing it
+  local drawn
+  local spySkin = setmetatable({
+    drawPlainRows = function(_, _, rows) drawn = rows end,
+  }, { __index = Skin })
+  T.check(Menus.installOptionsScreen(optionsMod, spySkin, reader()),
+    "the OPTION screen is registered over a grouped engine")
+
+  -- flat is longer than the view, which is the whole point: eight of its rows
+  -- are inside groups and reach the screen as three openers
+  local FLAT, VIEW = {}, {}
+  for i = 1, 12 do FLAT[i] = { label = "FLAT" .. i } end
+  for i = 1, 5 do VIEW[i] = { label = "VIEW" .. i } end
+
+  local Builtin = {}
+  Builtin.__index = Builtin
+  function Builtin.new(game)
+    return setmetatable({ game = game, rows = FLAT, view = VIEW,
+                          index = 1, scroll = 0 }, Builtin)
+  end
+  function Builtin.draw() end
+  -- the engine moves the cursor over the view, CANCEL sitting past its end
+  function Builtin.update(self, dir)
+    local cancelRow = #(self.view or self.rows) + 1
+    if dir == "down" then
+      self.index = self.index < cancelRow and self.index + 1 or 1
+    end
+  end
+
+  local saved = package.loaded["src.ui.OptionsMenu"]
+  package.loaded["src.ui.OptionsMenu"] = Builtin
+  local state = registered.record.new({})
+  package.loaded["src.ui.OptionsMenu"] = saved
+
+  state.index = #VIEW
+  state:update("down")
+  T.eq(state.index, 1,
+    "down off the last visible row wraps, measured against the view")
+
+  state.index = 2
+  state:draw()
+  T.eq(drawn, VIEW, "and the screen draws the view, not the flat list")
+  T.eq(#drawn, #VIEW, "which is the shorter of the two")
+end
+
 do -- the scroll clamp that replaces OptionRows.clampScroll
   T.eq(Skin.clampPlainScroll(1, 0, 9), 0, "the top of the list needs no scroll")
   T.eq(Skin.clampPlainScroll(9, 0, 9), 9 - Skin.CARDS,
