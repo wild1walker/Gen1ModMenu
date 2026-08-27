@@ -1219,6 +1219,52 @@ do
   T.eq(#drawn, #VIEW, "which is the shorter of the two")
 end
 
+-- Rows that ask for the top.  The engine lays out the rows its own ORDER names
+-- first and appends the rest, so a row added through the ui.options.rows hook
+-- cannot reach the front however it anchors itself.  `top = true` asks; this
+-- lifts them, in the order they already had, and leaves the flat list alone.
+do
+  local registered
+  local optionsMod = {
+    ui = {}, log = modStub.log,
+    content = { screens = { register = function(_, id, record)
+      registered = { id = id, record = record }
+    end } },
+  }
+  -- hide_cancel OFF: the hoist is the list's order, not its drawing, so it
+  -- must not depend on whether CANCEL is being hidden
+  T.check(Menus.installOptionsScreen(optionsMod, Skin,
+    reader({ hide_cancel = false })), "registered with HIDE CANCEL off")
+
+  local FLAT = { { id = "textSpeed" } }
+  local VIEW = {
+    { id = "group.speed", label = "SPEED" },
+    { id = "mods", label = "MODS" },
+    { id = "Gen1MenuManager", label = "MENU MANAGER", top = true },
+    { id = "controls", label = "CONTROLS" },
+  }
+  local Builtin = {}
+  Builtin.__index = Builtin
+  function Builtin.new(game)
+    return setmetatable({ game = game, rows = FLAT, view = VIEW,
+                          index = 1, scroll = 0 }, Builtin)
+  end
+  function Builtin.draw() end
+  function Builtin.update() end
+
+  local saved = package.loaded["src.ui.OptionsMenu"]
+  package.loaded["src.ui.OptionsMenu"] = Builtin
+  local state = registered.record.new({})
+  package.loaded["src.ui.OptionsMenu"] = saved
+
+  T.eq(state.view[1].label, "MENU MANAGER", "the row that asked is first")
+  T.eq(state.view[2].label, "SPEED", "and the rest keep their own order")
+  T.eq(state.view[3].label, "MODS", "including MODS")
+  T.eq(state.view[4].label, "CONTROLS", "and the platform rows behind it")
+  T.eq(#state.view, #VIEW, "no row is lost or gained")
+  T.eq(state.rows, FLAT, "the flat list the hook built is untouched")
+end
+
 do -- the scroll clamp that replaces OptionRows.clampScroll
   T.eq(Skin.clampPlainScroll(1, 0, 9), 0, "the top of the list needs no scroll")
   T.eq(Skin.clampPlainScroll(9, 0, 9), 9 - Skin.CARDS,

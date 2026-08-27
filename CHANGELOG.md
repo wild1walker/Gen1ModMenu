@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.9.0
+
+A row on the OPTION screen can ask for the front of the list, by carrying
+`top = true`. Rows that ask are lifted in the order they already had, and
+everything else keeps its own order behind them.
+
+This exists because no mod can get there on its own. Since the engine grouped
+that screen it lays out the rows its own `ORDER` names first -- the group
+openers, then `MODS` -- and appends everything it does not name after them. A
+row added through the `ui.options.rows` hook is never named there, so however
+it anchors itself it lands behind every built-in row. `top` is the way past
+that, and it is this mod's to offer: it is the one that already owns the
+screen's presentation.
+
+- It reorders `view`, what the screen shows and what the cursor counts. `rows`,
+  the flat list the hook built, is left exactly as it was, so a mod reading it
+  back still sees what it handed over.
+- It runs whatever `STYLE` and `HIDE CANCEL` are set to. That is deliberate:
+  this is the list's order, not its drawing, and a row that asked for the top
+  should not move because a different row stopped being hidden.
+- [Gen1MenuManager](https://github.com/wild1walker/Gen1MenuManager) 0.2.8 is
+  the first to ask.
+
 ## 0.8.2
 
 **The OPTION screen showed the wrong rows.** Fixed. If you are on `STYLE =
